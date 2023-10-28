@@ -67,6 +67,7 @@ def skolemfunction_preprocess(inputfile_name, Xvar,Yvar, PosUnate, NegUnate, Uni
 	with open(skolemfile_name,"w") as f:
 		f.write(skolemformula)
 	f.close()
+	return skolemformula
 	
 
 def createSkolemfunction(inputfile_name, Xvar,Yvar):
@@ -108,7 +109,7 @@ def createSkolemfunction(inputfile_name, Xvar,Yvar):
 			line = line.replace("o","w")
 		content += line
 	
-	skolemfile_name = inputfile_name + "_skolem.v"
+	skolemfile_name = "out/" + inputfile_name + "_skolem.v"
 	
 	with open(skolemfile_name,"w") as f:
 		f.write(declare + declare_input + content + assign + "endmodule\n")
@@ -123,7 +124,7 @@ def createErrorFormula(Xvar, Yvar,  verilog_formula):
 
 	'''
 	
-	Creating E(X,Y,Y') = \varphi(X,Y) \land \lnot \varphi(X,Y') \land (Y' <-> F(X))
+	Creating E(X,Y,Y') = \\varphi(X,Y) \\land \\lnot \\varphi(X,Y') \\land (Y' <-> F(X))
 	
 	inputerrorx is for X 
 	inputerrory is for Y

@@ -55,14 +55,22 @@ from src.generateSamples import *
 from src.candidateSkolem import *
 from src.repair import *
 
+from src.logUtils import *
+
 
 def logtime(inputfile, text):
     with open(inputfile+"time_details", "a+") as f:
         f.write(text + "\n")
     f.close()
 
+def mkdir(path):
+    folder = os.path.exists(path)
+    if not folder:
+        os.makedirs(path)
 
-def manthan():
+def manthan(args) -> LogEntry:
+    log_entry = LogEntry()
+
     print(" c parsing")
     start_time = time.time()
 
@@ -72,6 +80,14 @@ def manthan():
     else:
         Xvar, Yvar, qdimacs_list, dg = parse(args)
 
+    # log
+    log_entry.input_vars = Xvar
+    log_entry.output_vars = Yvar
+    log_entry.dag = dg
+    log_entry.clause_list = qdimacs_list
+    if args.henkin:
+        log_entry.henkin_dep = HenkinDep
+    
     '''
         We create a DAG to handle dependencies among existentially quantified variables
         if y_i depends on y_j, there is a edge from y_i to y_j
@@ -86,6 +102,8 @@ def manthan():
         print(" c  Y (existentially quantified variables) variables",(Yvar))
 
     inputfile_name = args.input.split('/')[-1][:-8]
+    log_entry.instance_name = inputfile_name
+    log_entry.instance_str = get_inputfile_contenet(args.input)
 
     cnffile_name = tempfile.gettempdir()+"/"+inputfile_name+".cnf"
 
@@ -95,6 +113,7 @@ def manthan():
         cnfcontent = convertcnf(args, cnffile_name, Yvar)
 
     cnfcontent = cnfcontent.strip("\n")+"\n"
+    log_entry.cnfcontent = cnfcontent.strip("\n")
 
     if (args.preprocess) and (not (args.henkin)):
         print(" c preprocessing: finding unates (constant functions)")
@@ -141,6 +160,9 @@ def manthan():
             qdimacs_list.append([-1 * int(yvar)])
             cnfcontent += "-%s 0\n" % (yvar)
 
+        log_entry.perprocess_out = Unates
+        log_entry.preprocess_time = end_time_preprocess - start_time_preprocess
+
     else:
         Unates = []
         PosUnate = []
@@ -155,10 +177,12 @@ def manthan():
         Generating verilog files to output Skolem functions.
         '''
 
-        skolemfunction_preprocess(inputfile_name,
-                                  Xvar, Yvar, PosUnate, NegUnate)
+        log_entry.output_verilog = skolemfunction_preprocess(inputfile_name, Xvar, Yvar, PosUnate, NegUnate)
 
         end_time = time.time()
+        log_entry.total_time = end_time - start_time
+        log_entry.exit_after_preprocess = True
+
         print(" c Manthan has synthesized Skolem functions")
         print(" c Total time taken", str(end_time-start_time))
         print("Skolem functions are stored at %s_skolem.v" % (inputfile_name))
@@ -228,6 +252,8 @@ def manthan():
     else:
         num_samples = args.maxsamples
 
+    log_entry.num_samples = num_samples
+
     '''
     We can either choose uniform sampler or weighted sampler.
     In case of weighted sampling, we need to find adaptive weights for each positive literals
@@ -290,6 +316,9 @@ def manthan():
 
     end_time_datagen = time.time()
 
+    log_entry.datagen_out = samples
+    log_entry.datagen_time = end_time_datagen - start_time_datagen
+
     if args.logtime:
         logtime(inputfile_name, "generating samples:" +
                 str(end_time_datagen-start_time_datagen))
@@ -318,6 +347,7 @@ def manthan():
     if args.logtime:
         logtime(inputfile_name, "candidate learning:" +
                 str(end_time_learn-start_time_learn))
+    log_entry.leanskf_time = end_time_learn - start_time_learn
 
     '''
     YvarOrder is a total order of Y variables that represents interdependecies among Y. 
@@ -335,6 +365,7 @@ def manthan():
     '''
     createSkolem(candidateSkf, Xvar, Yvar, UniqueVars,
                  UniqueDef, inputfile_name)
+    log_entry.leanskf_out = get_from_file(tempfile.gettempdir() + '/' + inputfile_name + "_skolem.v"  )
     
     if args.verbose >=2:
         print("c learned candidate functions", candidateSkf)
@@ -475,6 +506,12 @@ def manthan():
     if args.logtime:
         logtime(inputfile_name, "repair time:"+str(end_time-start_time_repair))
         logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
+    log_entry.refine_time = end_time - start_time_repair
+    log_entry.repair_count = countRefine
+    if countRefine == 0:
+        log_entry.exit_after_leanskf = True
+    else:
+        log_entry.exit_after_refine = True
 
 
 if __name__ == "__main__":
@@ -574,4 +611,5 @@ if __name__ == "__main__":
 
     
     print(" c starting Manthan")
-    manthan()
+    mkdir("out")
+    manthan(args)

@@ -1,2 +1,7 @@
 oss-cad-suite/
 manthan_dependencies.cfg
+build/
+__pycache__/
+out/
+dataset/
+log/
