@@ -316,9 +316,9 @@ def simply(inputfile_name):
 def verify(args, config, Xvar, Yvar, inputfile_name):
 	errorformula = tempfile.gettempdir() + '/' + inputfile_name + "_errorformula.v"
 	cexfile = tempfile.gettempdir() + '/' + inputfile_name + "_cex.txt"
-	exists = os.path.isfile("strash.txt")
-	if exists:
-		os.system("rm strash.txt")
+	# exists = os.path.isfile("strash.txt")
+	# if exists:
+	# 	os.system("rm strash.txt")
 
 	file_generation_cex = config['Dependencies-Path']['file_generation_cex_path']
 	
@@ -327,10 +327,9 @@ def verify(args, config, Xvar, Yvar, inputfile_name):
 	if args.verbose >= 2:
 		print("c file generation cex --verify cmd", cmd)
 
-	os.system(cmd)
-	exists = os.path.isfile("strash.txt")
-	if exists:
-		os.system("rm strash.txt")
+	cmd_ret = os.system(cmd)
+	if cmd_ret == 0:
+		#os.system("rm strash.txt")
 		exists_cex = os.path.isfile(cexfile)
 		if exists_cex:
 			cexmodels = []

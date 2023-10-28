@@ -68,7 +68,51 @@ def mkdir(path):
     if not folder:
         os.makedirs(path)
 
-def manthan(args) -> LogEntry:
+def check_config(config):
+    if config.has_option('ITP-Path','itp_path'):
+        sys.path.append(config['ITP-Path']['itp_path'])
+        from src.callUnique import find_unique_function
+    else:
+        print("c could not find itp module")
+        print("c check unique installation")
+        print("c check if pythonblind[global] is installed and found in cmake of unique")
+        exit()
+
+    if not config.has_section('Dependencies-Path'):
+        print(" c Did not install dependencies from source code, using precomplied binaries")
+        config.add_section('Dependencies-Path') 
+        config.set('Dependencies-Path', 'openwbo_path','./dependencies/static_bin/open-wbo')
+        config.set('Dependencies-Path', 'cmsgen_path','./dependencies/static_bin/cmsgen')
+        config.set('Dependencies-Path', 'picosat_path','./dependencies/static_bin/picosat')
+        config.set('Dependencies-Path', 'preprocess_path','./dependencies/static_bin/preprocess')
+        config.set('Dependencies-Path', 'file_generation_cex_path','./dependencies/static_bin/file_generation_cex')
+    
+    else:
+    
+        if not config.has_option('Dependencies-Path', 'openwbo_path'):
+            config.set('Dependencies-Path', 'openwbo_path','./dependencies/static_bin/open-wbo')
+
+        if not config.has_option('Dependencies-Path', 'cmsgen_path'):
+            config.set('Dependencies-Path', 'cmsgen_path','./dependencies/static_bin/cmsgen')
+        
+        if not config.has_option('Dependencies-Path', 'picosat_path'):
+            config.set('Dependencies-Path', 'picosat_path','./dependencies/static_bin/picosat')
+        
+        if not config.has_option('Dependencies-Path', 'preprocess_path'):
+            config.set('Dependencies-Path', 'preprocess_path','./dependencies/static_bin/preprocess')
+
+        if not config.has_option('Dependencies-Path', 'file_generation_cex_path'):
+            config.set('Dependencies-Path', 'file_generation_cex_path','./dependencies/static_bin/file_generation_cex')
+
+    return config
+
+
+def manthan(args, config, queue=None) -> LogEntry:
+    config = check_config(config)
+    if config.has_option('ITP-Path','itp_path'):
+        sys.path.append(config['ITP-Path']['itp_path'])
+        from src.callUnique import find_unique_function
+    
     log_entry = LogEntry()
 
     print(" c parsing")
@@ -371,6 +415,7 @@ def manthan(args) -> LogEntry:
         print("c learned candidate functions", candidateSkf)
 
     error_content = createErrorFormula(Xvar, Yvar,  verilogformula)
+    log_entry.errorformula_out = error_content
 
     '''
     We use maxsat to identify the candidates to repair. We are converting specification as a hard constraint for maxsat.
@@ -409,12 +454,11 @@ def manthan(args) -> LogEntry:
             if args.verbose:
                 print(" c no more repair needed")
                 print(" c number of repairs needed to converge", countRefine)
-            
-            
 
             createSkolemfunction(inputfile_name, Xvar, Yvar)
 
             end_time = time.time()
+            log_entry.sat = True
 
             print(" c Total time taken", str(end_time-start_time))
             print("Skolem functions are stored at %s_skolem.v" %
@@ -513,6 +557,9 @@ def manthan(args) -> LogEntry:
     else:
         log_entry.exit_after_refine = True
 
+    log_entry.to_file()
+    log_entry.write_middle_out()
+
 
 if __name__ == "__main__":
 
@@ -565,51 +612,7 @@ if __name__ == "__main__":
     configFilePath = "manthan_dependencies.cfg"
     config.read(configFilePath)
 
-    if config.has_option('ITP-Path','itp_path'):
-        sys.path.append(config['ITP-Path']['itp_path'])
-        from src.callUnique import find_unique_function
-    else:
-        print("c could not find itp module")
-        print("c check unique installation")
-        print("c check if pythonblind[global] is installed and found in cmake of unique")
-        exit()
 
-    if not config.has_section('Dependencies-Path'):
-        print(" c Did not install dependencies from source code, using precomplied binaries")
-        config.add_section('Dependencies-Path') 
-        config.set('Dependencies-Path', 'openwbo_path','./dependencies/static_bin/open-wbo')
-        config.set('Dependencies-Path', 'cmsgen_path','./dependencies/static_bin/cmsgen')
-        config.set('Dependencies-Path', 'picosat_path','./dependencies/static_bin/picosat')
-        config.set('Dependencies-Path', 'preprocess_path','./dependencies/static_bin/preprocess')
-        config.set('Dependencies-Path', 'file_generation_cex_path','./dependencies/static_bin/file_generation_cex')
-    
-    else:
-    
-        if not config.has_option('Dependencies-Path', 'openwbo_path'):
-            config.set('Dependencies-Path', 'openwbo_path','./dependencies/static_bin/open-wbo')
-
-        if not config.has_option('Dependencies-Path', 'cmsgen_path'):
-            config.set('Dependencies-Path', 'cmsgen_path','./dependencies/static_bin/cmsgen')
-        
-        if not config.has_option('Dependencies-Path', 'picosat_path'):
-            config.set('Dependencies-Path', 'picosat_path','./dependencies/static_bin/picosat')
-        
-        if not config.has_option('Dependencies-Path', 'preprocess_path'):
-            config.set('Dependencies-Path', 'preprocess_path','./dependencies/static_bin/preprocess')
-
-        if not config.has_option('Dependencies-Path', 'file_generation_cex_path'):
-            config.set('Dependencies-Path', 'file_generation_cex_path','./dependencies/static_bin/file_generation_cex')
-        
-    if args.verbose >= 2:
-        print(" c printing dependencies path")
-        print(" c preprocess path: %s" %(config['Dependencies-Path']['preprocess_path']))
-        print(" c cmsgen path: %s" %(config['Dependencies-Path']['cmsgen_path']))
-        print(" c open-wbo path: %s" %(config['Dependencies-Path']['openwbo_path']))
-        print(" c abc cex path: %s" %(config['Dependencies-Path']['file_generation_cex_path']))
-        print(" c picosat path: %s" %(config['Dependencies-Path']['picosat_path']))
-
-
-    
     print(" c starting Manthan")
     mkdir("out")
-    manthan(args)
+    manthan(args, config)

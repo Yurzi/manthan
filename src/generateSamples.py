@@ -90,7 +90,6 @@ def generatesample(args, config, num_samples, sampling_cnf, inputfile_name):
 
 	cmsgen = config['Dependencies-Path']['cmsgen_path']
 
-
 	cmd =  "%s %s --samplefile %s " %(cmsgen,tempcnffile, tempoutputfile)
 	cmd += "--seed %s --samples %s " %(args.seed, int(num_samples))
 	
@@ -118,8 +117,8 @@ def generatesample(args, config, num_samples, sampling_cnf, inputfile_name):
 		os.unlink(tempcnffile)
 
 	else:
-
 		print(" c some issue while generating samples..please check your sampler")
+		print(" c tempoutputfile is ", tempoutputfile)
 		exit()
 
 	
