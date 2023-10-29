@@ -62,7 +62,7 @@ def skolemfunction_preprocess(inputfile_name, Xvar,Yvar, PosUnate, NegUnate, Uni
 	declare = declare.strip(", ")+");\n"
 	skolemformula = declare + declarevar + wire + UniqueDef + assign + "endmodule\n"
 
-	skolemfile_name = inputfile_name + "_skolem.v"
+	skolemfile_name = "out/" + inputfile_name + "_skolem.v"
 
 	with open(skolemfile_name,"w") as f:
 		f.write(skolemformula)
@@ -111,13 +111,13 @@ def createSkolemfunction(inputfile_name, Xvar,Yvar):
 	
 	skolemfile_name = "out/" + inputfile_name + "_skolem.v"
 	
+	skolemfile_content = declare + declare_input + content + assign + "endmodule\n"
 	with open(skolemfile_name,"w") as f:
-		f.write(declare + declare_input + content + assign + "endmodule\n")
+		f.write(skolemfile_content)
 	f.close()
 
 	os.unlink(skolemformula)
-
-
+	return skolemfile_content
 
 
 def createErrorFormula(Xvar, Yvar,  verilog_formula):

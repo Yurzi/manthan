@@ -269,10 +269,12 @@ def manthan(args, config, queue=None) -> LogEntry:
         print(" c all Y variables are either unate or unique")
         print(" c found functions for all Y variables")
 
-        skolemfunction_preprocess(
+        log_entry.output_verilog = skolemfunction_preprocess(
             inputfile_name, Xvar, Yvar, PosUnate, NegUnate, UniqueVars, UniqueDef)
 
         end_time = time.time()
+        log_entry.total_time = end_time - start_time
+        log_entry.exit_after_preprocess = True
 
         print(" c Total time taken", str(end_time-start_time))
         print("Skolem functions are stored at %s_skolem.v" % (inputfile_name))
@@ -455,9 +457,9 @@ def manthan(args, config, queue=None) -> LogEntry:
                 print(" c no more repair needed")
                 print(" c number of repairs needed to converge", countRefine)
 
-            createSkolemfunction(inputfile_name, Xvar, Yvar)
+            log_entry.output_verilog = createSkolemfunction(inputfile_name, Xvar, Yvar)
 
-            end_time = time.time()
+            end_time = time.time() 
             log_entry.sat = True
 
             print(" c Total time taken", str(end_time-start_time))
