@@ -38,38 +38,53 @@ class LogEntry:
     self.exit_after_preprocess = False
     self.exit_after_leanskf = False
     self.exit_after_refine = False
+    self.exit_after_error = False
+
+  
   def __str__(self):
       return json.dumps(dict(self), ensure_ascii=False)
+  
+  
   def caculate_circuit_size(self, recaculate=False):
     if recaculate or self.circuit_size == -1:
       self.circuit_size = 0 # TODO: calculate circuit size
     return self.circuit_size
+  
+  
   def to_file(self):
     mkdir("log")
     path = "log/" + str(self.instance_name) + ".pkl"
     with open(path, "wb") as f:
       pickle.dump(self, f)
     f.close()
+  
+  
   def write_middle_out(self):
     mkdir("log-middle")
+  
     cnfcontent_out_path = "log-middle/" + str(self.instance_name) + ".cnfcontent"
     preprocess_out_path = "log-middle/" + str(self.instance_name) + ".preprocess"
     datagen_out_path = "log-middle/" + str(self.instance_name) + ".datagen"
     leanskf_out_path = "log-middle/" + str(self.instance_name) + ".leanskf"
     errorformula_out_path = "log-middle/" + str(self.instance_name) + ".errorformula"
+  
     with open(cnfcontent_out_path, "w") as f:
       f.write(self.cnfcontent)
     f.close()
+  
     with open(preprocess_out_path, "w") as f:
       f.write(str(self.perprocess_out))
     f.close()
+  
     with open(datagen_out_path, "w") as f:
       for i in range(self.num_samples):
         f.write(np.array2string(self.datagen_out[i]))
         f.write("\n")
+  
     with open(leanskf_out_path, "w") as f:
       f.write(self.leanskf_out)
     f.close()
+  
     with open(errorformula_out_path, "w") as f:
       f.write(self.errorformula_out)
     f.close()
@@ -80,6 +95,7 @@ def get_from_file(filename):
     content = f.read()
   f.close()
   return content
+
 
 def get_inputfile_contenet(input_file):
   content = get_from_file(input_file)

@@ -448,6 +448,7 @@ def manthan(args, config, queue=None) -> LogEntry:
 
         if check == 0:
             print(" c error --- ABC network read fail")
+            log_entry.exit_after_error = True
             break
 
         if ret == 0:
