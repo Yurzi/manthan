@@ -68,7 +68,6 @@ if __name__ == "__main__":
     config.read(configFilePath)
         
     mkdir("out")
-    args.workers = 2
     process_pool = mp.Pool(args.workers)
 
     for file in get_files(args.input):
