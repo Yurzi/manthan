@@ -6,4 +6,8 @@ out/
 dataset/
 log/
 log-middle/
+errors/
 .vscode/
+*.cnf
+*.v
+*.txt

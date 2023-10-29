@@ -558,7 +558,7 @@ def manthan(args, config, queue=None) -> LogEntry:
         log_entry.exit_after_refine = True
 
     log_entry.to_file()
-    log_entry.write_middle_out()
+    # log_entry.write_middle_out()
 
 
 if __name__ == "__main__":
