@@ -143,9 +143,9 @@ def callMaxsat(args, config, maxsatcnf, modelyp, SkolemKnown, Yvar, YvarOrder, i
                 maxsatcnf += "%s %s 0\n" %(weight,var)
         itr += 1
 
-    maxsatformula =  inputfile_name + "_maxsat.cnf"
+    maxsatformula = tempfile.gettempdir() + "/" + inputfile_name + "_maxsat.cnf"
 
-    outputfile =  "o.txt"
+    outputfile =  tempfile.gettempdir() + "/" +inputfile_name + "_o.txt"
 
     with open(maxsatformula, "w") as f:
         f.write(maxsatcnf)
