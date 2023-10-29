@@ -61,47 +61,20 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.workers == 0:
-        args.workers = mp.cpu_count()
+        args.workers = int(mp.cpu_count() / 2)
 
     config = configparser.ConfigParser()
     configFilePath = "manthan_dependencies.cfg"
     config.read(configFilePath)
         
     mkdir("out")
-    
+    args.workers = 2
+    process_pool = mp.Pool(args.workers)
 
-    process_list = []
     for file in get_files(args.input):
         manthan_args = copy.deepcopy(args)
         manthan_args.input = file
-        process = mp.Process(target=manthan, args=(manthan_args, config, ))
-        process_list.append(process)
+        process_pool.apply_async(manthan, args=(manthan_args, config, ))
 
-    workers = args.workers
-
-    tasks = len(process_list)
-    idle_workers = workers
-    working = []
-    pendding_id = 0
-
-    while True:
-        if tasks == 0:
-            break
-        if idle_workers > 0:
-            for i in range(idle_workers):
-                if pendding_id >= len(process_list):
-                    break
-                process = process_list[pendding_id]
-                process.start()
-                working.append(process)
-                idle_workers -= 1
-                pendding_id += 1
-
-
-        for process in working:
-            if not process.is_alive():
-                process.join()
-                working.remove(process)
-                idle_workers += 1
-                tasks -= 1
-                process.close()
+    process_pool.close()
+    process_pool.join()
