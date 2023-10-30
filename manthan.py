@@ -431,6 +431,8 @@ def manthan(args, config, queue=None) -> LogEntry:
 
     while True:
 
+        now_time = time.time()
+
         '''
         adding Y' <-> f(X) term in the error formula
         '''
@@ -469,6 +471,11 @@ def manthan(args, config, queue=None) -> LogEntry:
             break
 
         if ret == 1:
+
+            if now_time - start_time > args.timeout:
+                print(" c timeout")
+                log_entry.exit_after_timeout = True
+                break
 
             countRefine += 1  # update the number of repair itr
 
@@ -554,6 +561,7 @@ def manthan(args, config, queue=None) -> LogEntry:
         logtime(inputfile_name, "repair time:"+str(end_time-start_time_repair))
         logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
     log_entry.refine_time = end_time - start_time_repair
+    log_entry.total_time = end_time - start_time
     log_entry.repair_count = countRefine
     if countRefine == 0:
         log_entry.exit_after_leanskf = True
@@ -600,6 +608,7 @@ if __name__ == "__main__":
                         help="maximum number of existentially quantified variables in a subset to be learned together via multiclassfication. Default is 8", default=8, dest='clustersize')
     parser.add_argument("--unique", help=" to enable (=1) or disable (=0) unique function finding. Default 1",
                         type=int, default=1, dest='unique')
+    parser.add_argument("--timeout", type=int, default=7200, dest='timeout')
     parser.add_argument("input", help="input file")
 
     args = parser.parse_args()

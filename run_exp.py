@@ -56,7 +56,7 @@ if __name__ == "__main__":
     parser.add_argument("--unique", help=" to enable (=1) or disable (=0) unique function finding. Default 1",
                         type=int, default=1, dest='unique')
     parser.add_argument("--workers", type=int, default=0, dest='workers')
-
+    parser.add_argument("--timeout", type=int, default=7200, dest='timeout')
     parser.add_argument("input", help="input dir")
 
     args = parser.parse_args()

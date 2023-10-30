@@ -39,7 +39,7 @@ class LogEntry:
     self.exit_after_leanskf = False
     self.exit_after_refine = False
     self.exit_after_error = False
-
+    self.exit_after_timeout = False
   
   def __str__(self):
       return json.dumps(dict(self), ensure_ascii=False)
