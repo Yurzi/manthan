@@ -107,7 +107,7 @@ def check_config(config):
     return config
 
 
-def manthan(args, config, queue=None) -> LogEntry:
+def manthan(args, config, queue=None):
     config = check_config(config)
     if config.has_option('ITP-Path','itp_path'):
         sys.path.append(config['ITP-Path']['itp_path'])
@@ -233,7 +233,8 @@ def manthan(args, config, queue=None) -> LogEntry:
 
         if args.logtime:
             logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
-        exit()
+        log_entry.to_file()
+        # exit()
 
     if args.unique:
         print(" c finding uniquely defined functions")
@@ -281,7 +282,8 @@ def manthan(args, config, queue=None) -> LogEntry:
 
         if args.logtime:
             logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
-        exit()
+        log_entry.to_file()
+        return
 
     '''
     deciding the number of samples to be generated
