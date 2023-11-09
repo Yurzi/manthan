@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     for input, f in result_list.items():
         try:
-            f.result(timeout=9000)
+            f.result()
         except TimeoutError:
             print("YY" + input + "Timeout ERROR")
 
