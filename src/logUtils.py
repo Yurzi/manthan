@@ -97,3 +97,12 @@ def get_inputfile_contenet(input_file):
   # remove enter
   content = content.replace("\n"," ")
   return content
+
+def set_run_pid(input_file):
+  path = "run/" + input_file + ".pid"
+  with open(path, "w") as f:
+    f.write("running")
+
+def unset_run_pid(input_file):
+  path = "run/" + input_file + ".pid"
+  os.unlink(path=path)

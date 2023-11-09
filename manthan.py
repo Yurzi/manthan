@@ -112,7 +112,8 @@ def manthan(args, config, queue=None):
     if config.has_option('ITP-Path','itp_path'):
         sys.path.append(config['ITP-Path']['itp_path'])
         from src.callUnique import find_unique_function
-    
+
+    set_run_pid(args.input)    
     log_entry = LogEntry()
 
     print(" c parsing")
@@ -233,6 +234,8 @@ def manthan(args, config, queue=None):
 
         if args.logtime:
             logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
+
+        unset_run_pid(args.input)
         log_entry.to_file()
         return
         # exit()
@@ -283,6 +286,8 @@ def manthan(args, config, queue=None):
 
         if args.logtime:
             logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
+        
+        unset_run_pid(args.input)
         log_entry.to_file()
         return
 
@@ -570,7 +575,8 @@ def manthan(args, config, queue=None):
         log_entry.exit_after_leanskf = True
     else:
         log_entry.exit_after_refine = True
-
+    
+    unset_run_pid(args.input)
     log_entry.to_file()
     # log_entry.write_middle_out()
 

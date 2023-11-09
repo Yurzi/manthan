@@ -169,7 +169,7 @@ def preprocess(cnffile_name,args,config):
 		try:
 			output = process.communicate(timeout=500)[0]
 		except Exception:
-			os.killpg(process.pid, signal.SIGINT)
+			os.killpg(process.pid, signal.SIGTERM)
 			PosUnate = []
 			NegUnate = []
 			print(" c timeout preprocessing..")
