@@ -70,11 +70,9 @@ class LogEntry:
   
     with open(cnfcontent_out_path, "w") as f:
       f.write(self.cnfcontent)
-    f.close()
   
     with open(preprocess_out_path, "w") as f:
       f.write(str(self.perprocess_out))
-    f.close()
   
     with open(datagen_out_path, "w") as f:
       for i in range(self.num_samples):
@@ -83,17 +81,14 @@ class LogEntry:
   
     with open(leanskf_out_path, "w") as f:
       f.write(self.leanskf_out)
-    f.close()
   
     with open(errorformula_out_path, "w") as f:
       f.write(self.errorformula_out)
-    f.close()
     
   
 def get_from_file(filename):
   with open(filename,"r") as f:
     content = f.read()
-  f.close()
   return content
 
 

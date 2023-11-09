@@ -25,6 +25,11 @@ THE SOFTWARE.
 from src.DefinabilityChecker import DefinabilityChecker
 import networkx as nx
 
+def fileerr(msg, filename):
+  path = "error/" + filename;
+  with open(path, "a") as f:
+    f.write(msg)
+
 def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep = {}):
 
 	
@@ -136,6 +141,7 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep =
 							clauseString += "w%s;\n" %(abs(defvar))
 						else:
 							print("check unique defination")
+							fileerr("check unique defination", args.input + ".err")
 							exit()
 
 						UniqueDef += "assign w%s = %s" %(yvar, clauseString)

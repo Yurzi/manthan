@@ -234,6 +234,7 @@ def manthan(args, config, queue=None):
         if args.logtime:
             logtime(inputfile_name, "totaltime:"+str(end_time-start_time))
         log_entry.to_file()
+        return
         # exit()
 
     if args.unique:

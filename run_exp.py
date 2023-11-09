@@ -4,6 +4,7 @@ import argparse
 import configparser
 import copy
 import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
 
 from manthan import manthan
 
@@ -68,12 +69,21 @@ if __name__ == "__main__":
     config.read(configFilePath)
         
     mkdir("out")
-    process_pool = mp.Pool(args.workers)
-
+    process_pool = ProcessPoolExecutor(max_workers=args.workers)
+    result_list = {}
+    
     for file in get_files(args.input):
         manthan_args = copy.deepcopy(args)
         manthan_args.input = file
-        process_pool.apply_async(manthan, args=(manthan_args, config, ))
+        f = process_pool.submit(manthan, manthan_args, config)
+        result_list[str(file)] = f
 
-    process_pool.close()
-    process_pool.join()
+    process_pool.shutdown()
+
+    for input, f in result_list.items():
+        try:
+            f.result(timeout=9000)
+        except TimeoutError:
+            print("YY" + input + "Timeout ERROR")
+
+    exit()

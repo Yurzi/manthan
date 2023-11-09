@@ -27,6 +27,10 @@ import numpy as np
 from numpy import count_nonzero
 import os
 
+def fileerr(msg, filename):
+  path = "error/" + filename;
+  with open(path, "a") as f:
+    f.write(msg)
 
 def computeBias(args, config, Yvar,sampling_cnf, sampling_weights_y_1, sampling_weights_y_0, inputfile_name, SkolemKnown):
 
@@ -119,6 +123,7 @@ def generatesample(args, config, num_samples, sampling_cnf, inputfile_name):
 	else:
 		print(" c some issue while generating samples..please check your sampler")
 		print(" c tempoutputfile is ", tempoutputfile)
+		fileerr("c some issue while geneating samples", inputfile_name + ".err")
 		exit()
 
 	

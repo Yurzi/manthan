@@ -32,6 +32,11 @@ import os
 import numpy as np
 import networkx as nx
 
+def fileerr(msg, filename):
+  path = "error/" + filename;
+  with open(path, "w") as f:
+    f.write(msg)
+
 def parse(args):
 	with open(args.input) as f:
 		lines = f.readlines()
@@ -43,7 +48,7 @@ def parse(args):
 
 	For DQBF 
 	H{} presents Henkin Dependencies
-	H[y_i] = [x_1, \ldots,x_a] where x_1,\ldots x_a \subseteq X
+	H[y_i] = [x_1, \\ldots,x_a] where x_1,\\ldots x_a \\subseteq X
 	
 	'''
 
@@ -85,6 +90,7 @@ def parse(args):
 
 	if (len(Xvar) == 0) or (len(Yvar) == 0) or (len(qdimacs_list) == 0):
 		print(" c problem with the files, can not synthesis Skolem functions")
+		fileerr("c problem with the files, can not synthesis Skolem functions", args.input + ".err")
 		exit()
 	
 	
@@ -148,11 +154,11 @@ def convertcnf(args, cnffile_name, Yvar = []):
 
 
 def preprocess(cnffile_name,args,config):
-
 	'''
 	Preprocess calls Cryptominisat Based framework to find 
 	positive and negative unates.
 	'''
+
 	preprocess = config['Dependencies-Path']['preprocess_path']
 	cmd = "%s %s " % (preprocess, cnffile_name)
 
@@ -191,9 +197,6 @@ def preprocess(cnffile_name,args,config):
 				os.unlink(cnffile_name + "_vardetails")
 			else:
 				print(" c preprocessing error .. contining ")
+				fileerr("c preprocessing error .. contining", cnffile_name + ".err")
 				exit()
 			return PosUnate, NegUnate
-
-
-
-
