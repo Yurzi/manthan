@@ -69,7 +69,7 @@ if __name__ == "__main__":
     config.read(configFilePath)
         
     mkdir("out")
-    process_pool = CirnoPool(max_process=args.workers, sleep_timeout=1)
+    process_pool = CirnoPool(max_process=args.workers)
     result_list = {}
     
     for file in get_files(args.input):
