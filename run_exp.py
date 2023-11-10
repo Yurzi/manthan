@@ -3,8 +3,8 @@ import sys
 import argparse
 import configparser
 import copy
+from src.cirno.cirno import CirnoPool
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor
 
 from manthan import manthan
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     config.read(configFilePath)
         
     mkdir("out")
-    process_pool = ProcessPoolExecutor(max_workers=args.workers)
+    process_pool = CirnoPool(max_process=args.workers, sleep_timeout=1)
     result_list = {}
     
     for file in get_files(args.input):
@@ -79,10 +79,11 @@ if __name__ == "__main__":
         result_list[str(file)] = f
 
     process_pool.shutdown()
+    process_pool.close()
 
     for input, f in result_list.items():
         try:
-            f.result()
+            f.result
         except TimeoutError:
             print("YY" + input + "Timeout ERROR")
 
