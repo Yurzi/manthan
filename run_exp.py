@@ -23,10 +23,17 @@ def get_files(base):
 
 def has_result(file: str | os.PathLike) -> bool:
     out_dir = "out"
+    log_dir = "log"
     basname = os.path.basename(file).split(".")[0]
     for root, dirs, files in os.walk(out_dir):
         for file in files:
             if file.endswith("_skolem.v"):
+                if basname in file:
+                    return True
+                
+    for root, dirs, files in os.walk(log_dir):
+        for file in files:
+            if file.endswith(".pkl"):
                 if basname in file:
                     return True
     return False
