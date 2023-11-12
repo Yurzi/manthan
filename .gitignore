@@ -11,3 +11,4 @@ errors/
 *.cnf
 *.v
 *.txt
+run/
