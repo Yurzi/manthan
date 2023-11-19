@@ -172,3 +172,5 @@ if __name__ == "__main__":
             f.result
         except TimeoutError:
             print("YY" + input + "Timeout ERROR")
+        except Exception as e:
+            print("YY" + input + " " + e)
