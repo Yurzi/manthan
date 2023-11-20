@@ -3,6 +3,7 @@ import os
 import numpy as np
 import subprocess as subp
 from typing import Self
+from src.converToPY import convert_skf_to_pyfunc
 
 
 def mkdir(path):
@@ -108,6 +109,26 @@ class LogEntry:
 
         self.circuit_size = temp[-1]
         return self.circuit_size
+    
+    def get_samples_acc(self) -> float:
+        if self.num_samples == 0:
+            return 0
+        func = convert_skf_to_pyfunc(self.output_verilog)
+        acc = 0
+        for input in self.datagen_out:
+            input = [bool(item) for item in input]
+            output = func(*input)
+            acc_flag = True
+            for i in range(0, len(input)):
+                if input[i] == output[i]:
+                    continue
+                else:
+                    acc_flag = False
+                    break
+            if acc_flag:
+                acc += 1
+
+        return acc / self.num_samples
 
     @staticmethod
     def from_file(filename) -> Self:

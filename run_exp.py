@@ -24,7 +24,7 @@ def get_files(base):
 def has_result(file: str | os.PathLike) -> bool:
     out_dir = "out"
     log_dir = "log"
-    basname = os.path.basename(file).split(".")[0]
+    basname = os.path.basename(file).split(".")[0:-1]
     for root, dirs, files in os.walk(out_dir):
         for file in files:
             if file.endswith("_skolem.v"):
