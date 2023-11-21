@@ -5,3 +5,5 @@ pydotplus
 python-sat>=0.1.8.dev8
 pybind11[global]
 psutil
+pandas
+openpyxl

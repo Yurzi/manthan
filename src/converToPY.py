@@ -242,18 +242,6 @@ class StmLine:
 
     def parse(self) -> None:
         res: list[Token] = list()
-        keyword = self.tokens[0].lexme
-        if keyword == "module":
-            self.kind = self.Kind.Module
-        if keyword == "input":
-            self.kind = self.Kind.Input
-        if keyword == "output":
-            self.kind = self.Kind.Output
-        if keyword == "wire":
-            self.kind = self.Kind.Wire
-        if keyword == "assign":
-            self.kind = self.Kind.Assign
-
         for token in self.tokens:
             if token.kind is Token.Kind.Whitespace:
                 continue
@@ -265,6 +253,18 @@ class StmLine:
                 continue
 
             res.append(token)
+        keyword = res[0].lexme
+        if keyword == "module":
+            self.kind = self.Kind.Module
+        if keyword == "input":
+            self.kind = self.Kind.Input
+        if keyword == "output":
+            self.kind = self.Kind.Output
+        if keyword == "wire":
+            self.kind = self.Kind.Wire
+        if keyword == "assign":
+            self.kind = self.Kind.Assign
+
         self.tokens = res
 
     def __str__(self) -> str:
@@ -342,6 +342,32 @@ class Expression:
                 else:
                     if int(token.lexme) == 0:
                         res.append("False")
+                continue
+            res.append(token.lexme)
+        res = " ".join(res)
+        return res
+
+    def gen_verilog(self) -> str:
+        res = []
+        for token in self.expr:
+            if token.kind is Token.Kind.And:
+                res.append("&")
+                continue
+            if token.kind is Token.Kind.Or:
+                res.append("|")
+                continue
+            if token.kind is Token.Kind.Not:
+                res.append("~")
+                continue
+            if token.kind is Token.Kind.Xor:
+                res.append("^")
+                continue
+            if token.kind is Token.Kind.Literal:
+                if int(token.lexme) == 1:
+                    res.append("1")
+                else:
+                    if int(token.lexme) == 0:
+                        res.append("1")
                 continue
             res.append(token.lexme)
         res = " ".join(res)
@@ -429,6 +455,7 @@ class Module:
         var_list = [var.lexme for var in self.input_vars]
         var_list.extend([var.lexme for var in self.output_vars])
         var_list = special_sort(var_list)
+        var_list.append("*args")
         var_list = ", ".join(var_list)
 
         res.append(f"def {self.name.lexme}({var_list}):")
@@ -443,10 +470,37 @@ class Module:
         ret_vars = [var.lexme for var in self.output_vars]
         ret_vars.extend([var.lexme for var in self.input_vars])
         ret_vars = special_sort(ret_vars)
+        if len(ret_vars) > 0:
+            ret_vars.append("*args")
+        else:
+            ret_vars.append("args")
+        
         ret_vars = ", ".join(ret_vars)
         ret = f"    return {ret_vars}"
         res.append(ret)
 
+        res = "\n".join(res)
+        return res
+
+    def gen_verilog(self) -> str:
+        res = list()
+        # module def
+        io_vars = [var.lexme for var in self.input_vars]
+        io_vars.extend([var.lexme for var in self.output_vars])
+        io_vars = ", ".join(io_vars)
+        res.append(f"module {self.name.lexme}({io_vars});")
+        # var declare
+        for var in self.input_vars:
+            res.append(f"    input {var.lexme};")
+        for var in self.output_vars:
+            res.append(f"    output {var.lexme};")
+        for var in self.inner_vars:
+            res.append(f"    wire {var.lexme};")
+        # expr
+        for expr in self.exprs:
+            res.append(f"    assign {expr.gen_verilog()};")
+        # endmodule
+        res.append("endmodule")
         res = "\n".join(res)
         return res
 
@@ -477,8 +531,28 @@ def convert_skf_to_pyfunc(input: str) -> callable:
     module = Module(tokens)
     module.reorgnize()
     from types import FunctionType
-
     py_code = compile(module.gen_pycode(), "<string>", "exec")
     py_func = FunctionType(py_code.co_consts[0], globals(), module.name.lexme)
 
     return py_func
+
+
+def convert_skf_to_pycode(input: str) -> str:
+    tokens = list()
+    for token in Tokenzier(input):
+        tokens.append(token)
+
+    module = Module(tokens)
+    module.reorgnize()
+
+    return module.gen_pycode()
+
+
+def repair_skf_verilog(input: str) -> str:
+    tokens = list()
+    for token in Tokenzier(input):
+        tokens.append(token)
+
+    module = Module(tokens)
+    module.reorgnize()
+    return module.gen_verilog()

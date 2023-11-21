@@ -3,7 +3,7 @@ import os
 import numpy as np
 import subprocess as subp
 from typing import Self
-from src.converToPY import convert_skf_to_pyfunc
+from src.converToPY import convert_skf_to_pyfunc, repair_skf_verilog
 
 
 def mkdir(path):
@@ -78,7 +78,9 @@ class LogEntry:
         if self.output_verilog == "":
             self.circuit_size = 0
             return self.circuit_size
-
+        
+        self.output_verilog = repair_skf_verilog(self.output_verilog)
+        
         # caculate circuit size use external tool
         # 1. write verilog to file
         mkdir("run")
@@ -109,8 +111,8 @@ class LogEntry:
 
         self.circuit_size = temp[-1]
         return self.circuit_size
-    
-    def get_samples_acc(self) -> float:
+
+    def get_samples_acc(self):
         if self.num_samples == 0:
             return 0
         func = convert_skf_to_pyfunc(self.output_verilog)
@@ -128,7 +130,40 @@ class LogEntry:
             if acc_flag:
                 acc += 1
 
-        return acc / self.num_samples
+        return acc, self.num_samples
+
+    def get_clause_list(self):
+        self.clause_list = []
+        lines = self.instance_str.split(" 0 ")
+        for line in lines:
+
+            if line.startswith("c"):
+                continue
+            if line.startswith("p"):
+                continue
+            if line.startswith("a"):
+                continue
+            if line.startswith("e"):
+                continue
+            if line.startswith("d"):
+                continue
+            clause = line.strip(" ").strip("\n").strip(" ").split(" ")[:-1]
+            if len(clause) > 0:
+                clause = list(map(int, list(clause)))
+                self.clause_list.append(clause)
+            
+        return self.clause_list
+
+    def get_clause_list_avg_len(self):
+        clause_list = self.get_clause_list()
+        if len(clause_list) == 0:
+            return 0
+
+        total_len = 0
+        for clause in clause_list:
+            total_len += len(clause)
+
+        return total_len / len(clause_list)
 
     @staticmethod
     def from_file(filename) -> Self:
