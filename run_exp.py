@@ -28,13 +28,13 @@ def has_result(file: str | os.PathLike) -> bool:
     for root, dirs, files in os.walk(out_dir):
         for file in files:
             if file.endswith("_skolem.v"):
-                if basname in file:
+                if basname == file.strip("_skolem.v"):
                     return True
-                
+
     for root, dirs, files in os.walk(log_dir):
         for file in files:
             if file.endswith(".pkl"):
-                if basname in file:
+                if basname == file.strip(".pkl"):
                     return True
     return False
 
@@ -151,19 +151,22 @@ if __name__ == "__main__":
     config.read(configFilePath)
 
     mkdir("out")
-    process_pool = CirnoPool(max_process=args.workers)
+    process_pool = CirnoPool(max_process=args.workers, is_smart=False)
     result_list = {}
 
+    task_count = 0
+    total_count = 0
     for file in get_files(args.input):
+        total_count += 1
         if has_result(file):
             print(f"Instane: {file}'s result is exist")
             continue
-
+        task_count += 1
         manthan_args = copy.deepcopy(args)
         manthan_args.input = file
         f = process_pool.submit(manthan, manthan_args, config)
         result_list[str(file)] = f
-
+    print(f"Total: {total_count}, task: {task_count}")
     process_pool.shutdown()
     process_pool.close()
 
