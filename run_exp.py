@@ -35,7 +35,9 @@ def has_result(file: str | os.PathLike) -> bool:
     for root, dirs, files in os.walk(log_dir):
         for file in files:
             if file.endswith(".pkl"):
-                if basname in file:
+                file = file.split(".")[0:-1]
+                file = ".".join(file)
+                if basname == file:
                     return True
     return False
 
