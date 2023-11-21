@@ -118,6 +118,7 @@ class Tokenzier:
                 return self.EOF_CHAR
 
             return self._chars[self._index]
+
         @property
         def second(self) -> str:
             if self._index + 1 >= len(self._chars):
@@ -182,7 +183,8 @@ class Tokenzier:
 
     @staticmethod
     def is_lit_part(c: str) -> bool:
-        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d"
+        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d" or  c == "'"
+
     @staticmethod
     def is_lit_contine(c: str) -> bool:
         return c.isdigit() or c == "_"
@@ -393,8 +395,12 @@ class Expression:
             if token.kind is Token.Kind.Literal:
                 if can_add_lit is False:
                     continue
-                literal = token.lexme.split("'")[-1]
-                literal = literal[1:]
+                literal = token.lexme.split("'")
+                if len(literal) > 1:
+                    literal = literal[-1][1:]
+                else:
+                    literal = literal[0]
+
                 if int(literal) >= 1:
                     res.append("True")
                 else:
@@ -508,7 +514,7 @@ class Module:
                     var_2 = int(vars[j + 1][1:])
                     if var_1 > var_2:
                         vars[j], vars[j + 1] = vars[j + 1], vars[j]
-            return varsssign
+            return vars
 
         res = list()
         # func def
