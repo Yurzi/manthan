@@ -171,6 +171,25 @@ class Tokenzier:
         return c.isalnum() or c == "_"
 
     @staticmethod
+    def is_lit_start(c: str) -> bool:
+        return c.isdigit() or c == "'"
+
+    @staticmethod
+    def is_lit_contine(c: str) -> bool:
+        return c.isdigit() or c == "_"
+
+    def lit(self) -> None:
+        now_char = self.cursor.bump()  # eat ' or a digit
+        if now_char == "'":
+            self.cursor.bump()  # eat b or o or h
+            self.cursor.eat_while(self.is_lit_contine)
+            return
+        self.cursor.eat_while(self.is_lit_contine)
+        self.cursor.bump()  # eat '
+        self.cursor.bump()  # eat b or o or h
+        self.cursor.eat_while(self.is_lit_contine)
+
+    @staticmethod
     def is_keyword(lexme: str) -> bool:
         if lexme in ["module", "input", "output", "wire", "assign", "endmodule"]:
             return True
@@ -188,8 +207,8 @@ class Tokenzier:
         if self.is_id_start(first_char):
             self.cursor.eat_while(self.is_id_contine)
             token_kind = Token.Kind.Ident
-        if first_char.isdigit():
-            self.cursor.eat_while(str.isdigit)
+        if self.is_lit_start(first_char):
+            self.lit()
             token_kind = Token.Kind.Literal
         if self.is_enter(first_char):
             self.cursor.eat_while(self.is_enter)
@@ -322,28 +341,47 @@ class Expression:
         self.expr = expr
 
     def gen_pycode(self) -> str:
+        can_add_lit = True
         res = []
         for token in self.expr:
             if token.kind is Token.Kind.And:
                 res.append("and")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Or:
                 res.append("or")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Not:
                 res.append("not")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Xor:
                 res.append("^")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Paren:
+                res.append(token.lexme)
+                can_add_lit = False
+                continue
+            if token.kind is Token.Kind.Eq:
+                res.append("=")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Literal:
-                if int(token.lexme) == 1:
+                if can_add_lit is False:
+                    continue
+                literal = token.lexme.split("'")[-1]
+                literal = literal[1:]
+                if int(literal) >= 1:
                     res.append("True")
                 else:
-                    if int(token.lexme) == 0:
-                        res.append("False")
+                    res.append("False")
+                can_add_lit = False
                 continue
+
             res.append(token.lexme)
+            can_add_lit = False
         res = " ".join(res)
         return res
 
@@ -474,7 +512,7 @@ class Module:
             ret_vars.append("*args")
         else:
             ret_vars.append("args")
-        
+
         ret_vars = ", ".join(ret_vars)
         ret = f"    return {ret_vars}"
         res.append(ret)
@@ -531,6 +569,7 @@ def convert_skf_to_pyfunc(input: str) -> callable:
     module = Module(tokens)
     module.reorgnize()
     from types import FunctionType
+
     py_code = compile(module.gen_pycode(), "<string>", "exec")
     py_func = FunctionType(py_code.co_consts[0], globals(), module.name.lexme)
 
