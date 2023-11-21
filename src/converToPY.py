@@ -414,28 +414,42 @@ class Expression:
         return res
 
     def gen_verilog(self) -> str:
+        can_add_lit = True
         res = []
         for token in self.expr:
             if token.kind is Token.Kind.And:
                 res.append("&")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Or:
                 res.append("|")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Not:
                 res.append("~")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Xor:
                 res.append("^")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Paren:
+                res.append(token.lexme)
+                can_add_lit = False
+                continue
+            if token.kind is Token.Kind.Eq:
+                res.append("=")
+                can_add_lit = True
                 continue
             if token.kind is Token.Kind.Literal:
-                if int(token.lexme) == 1:
-                    res.append("1")
-                else:
-                    if int(token.lexme) == 0:
-                        res.append("1")
+                if can_add_lit is False:
+                    continue
+                res.append(token.lexme)
+                can_add_lit = False
                 continue
+
             res.append(token.lexme)
+            can_add_lit = False
         res = " ".join(res)
         return res
 
