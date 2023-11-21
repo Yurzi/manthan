@@ -184,7 +184,7 @@ class Tokenzier:
             self.cursor.bump()  # eat b or o or h
             self.cursor.eat_while(self.is_lit_contine)
             return
-        if not now_char.isdigit():
+        if now_char == "b" or now_char == "h" or now_char == "o" or now_char == "d":
             self.cursor.eat_while(self.is_lit_contine)
             return
         self.cursor.eat_while(self.is_lit_contine)
