@@ -114,10 +114,16 @@ class Tokenzier:
 
         @property
         def first(self) -> str:
-            if self._index + 1 >= len(self._chars):
+            if self._index >= len(self._chars):
                 return self.EOF_CHAR
 
             return self._chars[self._index]
+        @property
+        def second(self) -> str:
+            if self._index + 1 >= len(self._chars):
+                return self.EOF_CHAR
+
+            return self._chars[self._index + 1]
 
         def bump(self) -> str | None:
             if self._index >= len(self._chars):
@@ -175,22 +181,35 @@ class Tokenzier:
         return c.isdigit() or c == "'"
 
     @staticmethod
+    def is_lit_part(c: str) -> bool:
+        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d"
+    @staticmethod
     def is_lit_contine(c: str) -> bool:
         return c.isdigit() or c == "_"
 
     def lit(self) -> None:
-        now_char = self.cursor.bump()  # eat ' or a digit or b or o or h
+        now_char = self.cursor.first  # eat ' or a digit or b or o or h
+        if not self.is_lit_part(now_char):
+            return
         if now_char == "'":
-            self.cursor.bump()  # eat b or o or h
+            self.cursor.bump()  # eat '
+            self.cursor.bump()  # eat b or o or h or d
             self.cursor.eat_while(self.is_lit_contine)
             return
-        if now_char == "b" or now_char == "h" or now_char == "o" or now_char == "d":
+        if now_char == "b" or now_char == "o" or now_char == "h" or now_char == "d":
+            self.cursor.bump()  # eat b or o or h or d
             self.cursor.eat_while(self.is_lit_contine)
             return
-        self.cursor.eat_while(self.is_lit_contine)
-        self.cursor.bump()  # eat '
-        self.cursor.bump()  # eat b or o or h
-        self.cursor.eat_while(self.is_lit_contine)
+        if now_char.isdigit():
+            self.cursor.eat_while(self.is_lit_contine)
+            next_char = self.cursor.first
+            if next_char == "'":
+                self.cursor.bump()  # eat '
+                self.cursor.bump()  # eat b or o or h or d
+                self.cursor.eat_while(self.is_lit_contine)  # eat lit
+                return
+            return
+        return
 
     @staticmethod
     def is_keyword(lexme: str) -> bool:
@@ -489,7 +508,7 @@ class Module:
                     var_2 = int(vars[j + 1][1:])
                     if var_1 > var_2:
                         vars[j], vars[j + 1] = vars[j + 1], vars[j]
-            return vars
+            return varsssign
 
         res = list()
         # func def
@@ -598,3 +617,13 @@ def repair_skf_verilog(input: str) -> str:
     module = Module(tokens)
     module.reorgnize()
     return module.gen_verilog()
+
+
+def print_debug(input: str):
+    tokens = list()
+    for token in Tokenzier(input):
+        print(token)
+        tokens.append(token)
+
+    module = Module(tokens)
+    # print(module)
