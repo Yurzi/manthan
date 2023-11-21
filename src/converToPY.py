@@ -179,9 +179,12 @@ class Tokenzier:
         return c.isdigit() or c == "_"
 
     def lit(self) -> None:
-        now_char = self.cursor.bump()  # eat ' or a digit
+        now_char = self.cursor.bump()  # eat ' or a digit or b or o or h
         if now_char == "'":
             self.cursor.bump()  # eat b or o or h
+            self.cursor.eat_while(self.is_lit_contine)
+            return
+        if not now_char.isdigit():
             self.cursor.eat_while(self.is_lit_contine)
             return
         self.cursor.eat_while(self.is_lit_contine)
