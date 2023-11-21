@@ -78,9 +78,9 @@ class LogEntry:
         if self.output_verilog == "":
             self.circuit_size = 0
             return self.circuit_size
-        
+
         self.output_verilog = repair_skf_verilog(self.output_verilog)
-        
+
         # caculate circuit size use external tool
         # 1. write verilog to file
         mkdir("run")
@@ -115,6 +115,10 @@ class LogEntry:
     def get_samples_acc(self):
         if self.num_samples == 0:
             return 0
+
+        if self.output_verilog == "":
+            return 0, self.num_samples
+
         func = convert_skf_to_pyfunc(self.output_verilog)
         acc = 0
         for input in self.datagen_out:
@@ -136,7 +140,6 @@ class LogEntry:
         self.clause_list = []
         lines = self.instance_str.split(" 0 ")
         for line in lines:
-
             if line.startswith("c"):
                 continue
             if line.startswith("p"):
@@ -151,7 +154,7 @@ class LogEntry:
             if len(clause) > 0:
                 clause = list(map(int, list(clause)))
                 self.clause_list.append(clause)
-            
+
         return self.clause_list
 
     def get_clause_list_avg_len(self):

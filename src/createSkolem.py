@@ -317,7 +317,7 @@ def verify(args, config, Xvar, Yvar, inputfile_name):
     # if exists:
     # 	os.system("rm strash.txt")
 
-    file_generation_cex = config["Dependencies-Path"]["beta3_3_path"]
+    file_generation_cex = config["Dependencies-Path"]["file_generation_cex_path"]
 
     cmd = "%s %s %s  > /dev/null 2>&1" % (file_generation_cex, errorformula, cexfile)
 
