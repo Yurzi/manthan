@@ -25,14 +25,19 @@ if __name__ == "__main__":
         "Refine时间": list(),
         "修复次数": list(),
         "合理采样": list(),
-        "总采样": list(),
+        # "总采样": list(),
         "退出阶段": list(),
         "备注": list(),
     }
 
     for file in get_files(dir_path):
-        log_obj = LogEntry.from_file(file)
         print("Now: ", log_obj.instance_name)
+        try:
+            log_obj = LogEntry.from_file(file)
+        except BaseException:
+            print("Error: ", file)
+            continue
+
         df_data["实例名称"].append(log_obj.instance_name)
         df_data["实例内容"].append(log_obj.instance_str)
         df_data["输入变量个数"].append(len(log_obj.input_vars))
@@ -44,7 +49,7 @@ if __name__ == "__main__":
         df_data["LearnSkf时间"].append(log_obj.leanskf_time)
         df_data["Refine时间"].append(log_obj.refine_time)
         df_data["修复次数"].append(log_obj.repair_count)
-        df_data["合理采样"].append(log_obj.get_samples_acc()[0])
+        # df_data["合理采样"].append(log_obj.get_samples_acc()[0])
         df_data["总采样"].append(log_obj.num_samples)
         if log_obj.exit_after_error:
             df_data["备注"].append("外部程序错误")
@@ -64,4 +69,3 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(df_data)
     df.to_excel("log.xlsx")
-
