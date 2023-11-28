@@ -85,6 +85,7 @@ class LogEntry:
 
         module = Module(tokens)
         self.circuit_size = len(module.exprs)
+        return self.circuit_size
 
     def get_samples_acc(self):
         if self.num_samples == 0:
