@@ -24,14 +24,14 @@ if __name__ == "__main__":
         "LearnSkf时间": list(),
         "Refine时间": list(),
         "修复次数": list(),
-        "合理采样": list(),
-        # "总采样": list(),
+        # "合理采样": list(),
+        "总采样": list(),
         "退出阶段": list(),
         "备注": list(),
     }
 
     for file in get_files(dir_path):
-        print("Now: ", log_obj.instance_name)
+        print("Now: ", file)
         try:
             log_obj = LogEntry.from_file(file)
         except BaseException:

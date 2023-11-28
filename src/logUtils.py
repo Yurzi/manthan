@@ -3,7 +3,7 @@ import os
 import numpy as np
 import subprocess as subp
 from typing import Self
-from src.converToPY import convert_skf_to_pyfunc, repair_skf_verilog
+from src.converToPY import convert_skf_to_pyfunc, repair_skf_verilog, Module, Tokenzier
 
 
 def mkdir(path):
@@ -79,38 +79,12 @@ class LogEntry:
             self.circuit_size = 0
             return self.circuit_size
 
-        self.output_verilog = repair_skf_verilog(self.output_verilog)
+        tokens = list()
+        for token in Tokenzier(self.output_verilog):
+            tokens.append(token)
 
-        # caculate circuit size use external tool
-        # 1. write verilog to file
-        mkdir("run")
-        verilog_path = "run/" + str(self.instance_name) + ".v"
-        with open(verilog_path, "w") as f:
-            f.write(self.output_verilog)
-        f.close()
-        # 2. wirte script to file
-        script_path = "run/" + str(self.instance_name) + ".script"
-        with open(script_path, "w") as f:
-            f.write("read_verilog " + verilog_path + "\n")
-            f.write("synth -top SkolemFormula -flatten\n")
-            f.write("abc -g NAND\n")
-            f.write("stat")
-        f.close()
-        # 3. run script
-        executor = "./oss-cad-suite/bin/yosys"
-        cmd = [executor, "-s", script_path]
-        p = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.PIPE)
-        out, err = p.communicate()
-        # 4. parse output
-        temp = []
-        out = out.decode("utf-8")
-        out = out.split("\n")
-        for line in out:
-            if "Number of cells" in line:
-                temp.append(int(line.split(" ")[-1]))
-
-        self.circuit_size = temp[-1]
-        return self.circuit_size
+        module = Module(tokens)
+        self.circuit_size = len(module.exprs)
 
     def get_samples_acc(self):
         if self.num_samples == 0:
