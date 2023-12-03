@@ -635,7 +635,7 @@ def repair_skf_verilog(input: str) -> str:
         tokens.append(token)
 
     module = Module(tokens)
-    module.reorgnize()
+    # module.reorgnize()
     return module.gen_verilog()
 
 
@@ -646,4 +646,4 @@ def print_debug(input: str):
         tokens.append(token)
 
     module = Module(tokens)
-    # print(module)
+    print(module)

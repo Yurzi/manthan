@@ -16,6 +16,3 @@
 [submodule "unique"]
 	path = dependencies/unique
 	url = https://github.com/fslivovsky/unique
-[submodule "src/cirno"]
-	path = src/cirno
-	url = https://github.com/Yurzi/cirno.git
