@@ -181,7 +181,9 @@ def manthan(args, config, queue=None):
         print(" c  X (universally quantified variables) variables", (Xvar))
         print(" c  Y (existentially quantified variables) variables", (Yvar))
 
-    inputfile_name = args.input.split("/")[-1][:-8]
+    inputfile_name = args.input.split("/")[-1].split(".")[:-1]
+    inputfile_name = ".".join(inputfile_name)
+    print(" c inputfile_name", inputfile_name)
     log_entry.instance_name = inputfile_name
     log_entry.instance_str = get_inputfile_contenet(args.input)
 

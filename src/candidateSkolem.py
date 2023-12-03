@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
 Copyright (C) 2021 Priyanka Golia, Subhajit Roy, and Kuldeep Meel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,7 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-'''
+"""
 
 import numpy as np
 from sklearn import tree
@@ -32,38 +32,76 @@ import collections
 import copy
 
 
-def treepaths(root, is_leaves, children_left, children_right, data_feature_names, 
-                feature, values, dependson, leave_label, Xvar, Yvar, index, size,args):
-    if (is_leaves[root]):
+def treepaths(
+    root,
+    is_leaves,
+    children_left,
+    children_right,
+    data_feature_names,
+    feature,
+    values,
+    dependson,
+    leave_label,
+    Xvar,
+    Yvar,
+    index,
+    size,
+    args,
+):
+    if is_leaves[root]:
         if not args.multiclass:
             temp = values[root]
             temp = temp.ravel()
             if len(temp) == 1:
                 if leave_label[0] == 1:
-                    return(['1'], dependson)
+                    return (["1"], dependson)
                 else:
-                    return(['val=0'], dependson)
+                    return (["val=0"], dependson)
 
             if temp[1] < temp[0]:
-                return(['val=0'], dependson)
+                return (["val=0"], dependson)
             else:
-                return(['1'], dependson)
+                return (["1"], dependson)
         else:
             node_label = leave_label[root]
-            bool_res = format(node_label,"0"+str(size)+"b")
+            bool_res = format(node_label, "0" + str(size) + "b")
             if int(bool_res[index]):
-                return (["1"],dependson)
+                return (["1"], dependson)
             else:
-                return(["val=0"],dependson)
-    	
-
+                return (["val=0"], dependson)
 
     left_subtree, dependson = treepaths(
-        children_left[root], is_leaves, children_left,
-        children_right, data_feature_names, feature, values, dependson,leave_label, Xvar, Yvar, index, size,args)
+        children_left[root],
+        is_leaves,
+        children_left,
+        children_right,
+        data_feature_names,
+        feature,
+        values,
+        dependson,
+        leave_label,
+        Xvar,
+        Yvar,
+        index,
+        size,
+        args,
+    )
     right_subtree, dependson = treepaths(
-        children_right[root], is_leaves, children_left,
-        children_right, data_feature_names, feature, values, dependson,leave_label, Xvar, Yvar, index, size,args)
+        children_right[root],
+        is_leaves,
+        children_left,
+        children_right,
+        data_feature_names,
+        feature,
+        values,
+        dependson,
+        leave_label,
+        Xvar,
+        Yvar,
+        index,
+        size,
+        args,
+    )
 
     # conjunction of all the literal in a path where leaf node has label 1
     # Dependson is list of Y variables on which candidate SKF of y_i depends
@@ -72,36 +110,43 @@ def treepaths(root, is_leaves, children_left, children_right, data_feature_names
         if leaf != "val=0":
             if data_feature_names[feature[root]] in Yvar:
                 dependson.append(data_feature_names[feature[root]])
-            # the left part
-                list_left.append("~w" + str(data_feature_names[feature[root]]) + ' & ' + leaf)
+                # the left part
+                list_left.append(
+                    "~w" + str(data_feature_names[feature[root]]) + " & " + leaf
+                )
             else:
-                list_left.append("~i" + str(data_feature_names[feature[root]]) + ' & ' + leaf)
-           
+                list_left.append(
+                    "~i" + str(data_feature_names[feature[root]]) + " & " + leaf
+                )
+
     list_right = []
     for leaf in right_subtree:
         if leaf != "val=0":
             if data_feature_names[feature[root]] in Yvar:
                 dependson.append(data_feature_names[feature[root]])
-                list_left.append("w"+str(data_feature_names[feature[root]]) + ' & ' + leaf)
+                list_left.append(
+                    "w" + str(data_feature_names[feature[root]]) + " & " + leaf
+                )
             else:
-                list_left.append("i"+str(data_feature_names[feature[root]]) + ' & ' + leaf)
+                list_left.append(
+                    "i" + str(data_feature_names[feature[root]]) + " & " + leaf
+                )
     dependson = list(set(dependson))
 
-    return(list_left + list_right, dependson)
+    return (list_left + list_right, dependson)
+
 
 def createDecisionTree(featname, featuredata, labeldata, yvar, args, Xvar, Yvar):
     clf = tree.DecisionTreeClassifier(
-        criterion='gini',
-        min_impurity_decrease=args.gini, random_state=args.seed)
+        criterion="gini", min_impurity_decrease=args.gini, random_state=args.seed
+    )
     clf = clf.fit(featuredata, labeldata)
     if args.showtrees:
-        dot_data = tree.export_graphviz(clf,
-                                        feature_names=featname,
-                                        out_file=None,
-                                        filled=True,
-                                        rounded=True)
+        dot_data = tree.export_graphviz(
+            clf, feature_names=featname, out_file=None, filled=True, rounded=True
+        )
         graph = pydotplus.graph_from_dot_data(dot_data)
-        colors = ('turquoise', 'orange')
+        colors = ("turquoise", "orange")
         edges = collections.defaultdict(list)
         for edge in graph.get_edge_list():
             edges[edge.get_source()].append(int(edge.get_destination()))
@@ -127,174 +172,177 @@ def createDecisionTree(featname, featuredata, labeldata, yvar, args, Xvar, Yvar)
     while len(stack) > 0:
         node_id, parent_depth = stack.pop()
         node_depth[node_id] = parent_depth + 1
-        if (children_left[node_id] != children_right[node_id]):
+        if children_left[node_id] != children_right[node_id]:
             stack.append((children_left[node_id], parent_depth + 1))
             stack.append((children_right[node_id], parent_depth + 1))
         else:
             is_leaves[node_id] = True
-            leave_label[node_id]=clf.classes_[np.argmax(clf.tree_.value[node_id])]
-    
+            leave_label[node_id] = clf.classes_[np.argmax(clf.tree_.value[node_id])]
+
     D_dict = {}
     psi_dict = {}
 
     for i in range(len(yvar)):
         D = []
-        paths, D = treepaths( 0, is_leaves, children_left, children_right, featname, feature, values, D, leave_label, Xvar, Yvar, i, len(yvar),args)
-    
-       
+        paths, D = treepaths(
+            0,
+            is_leaves,
+            children_left,
+            children_right,
+            featname,
+            feature,
+            values,
+            D,
+            leave_label,
+            Xvar,
+            Yvar,
+            i,
+            len(yvar),
+            args,
+        )
 
-        psi_i = ''
+        psi_i = ""
 
         if is_leaves[0]:
             if "val=0" in paths:
                 paths = ["0"]
             else:
-                paths = ["1"]  
-               
+                paths = ["1"]
+
         if len(paths) == 0:
             paths.append("0")
             D = []
 
         for path in paths:
-        
-            psi_i += "( "+ path + " ) | " 
-        
-        
+            psi_i += "( " + path + " ) | "
+
         D_dict[yvar[i]] = D
         psi_dict[yvar[i]] = psi_i.strip("| ")
-    
+
     return psi_dict, D_dict
-         
+
 
 def binary_to_int(lst):
+    lst = np.array(lst)
+    # filling the begining with zeros to form bytes
+    diff = 8 - lst.shape[1] % 8
+    if diff > 0 and diff != 8:
+        lst = np.c_[np.zeros((lst.shape[0], diff), int), lst]
+    label = np.packbits(lst, axis=1)
 
-	lst = np.array(lst)
-	# filling the begining with zeros to form bytes
-	diff = 8 - lst.shape[1] % 8
-	if diff > 0 and diff != 8:
-		lst = np.c_[np.zeros((lst.shape[0],diff),int),lst]
-	label = np.packbits(lst,axis=1)
+    return label
 
-	return label
 
 def createCluster(args, Yvar, SkolemKnown, ng):
-
     disjointSet = []
     clusterY = []
 
-    
     for var in Yvar:
-
         if var in SkolemKnown:
             continue
-        
-        if (args. multiclass) and not (args.henkin):
 
+        if (args.multiclass) and not (args.henkin):
             if var in list(ng.nodes):
-
                 Yset = []
                 hoppingDistance = args.hop
 
-                while (hoppingDistance > 0):
-
-                    hop_neighbour = list(nx.single_source_shortest_path_length(ng,var,cutoff = hoppingDistance))
+                while hoppingDistance > 0:
+                    hop_neighbour = list(
+                        nx.single_source_shortest_path_length(
+                            ng, var, cutoff=hoppingDistance
+                        )
+                    )
 
                     if len(hop_neighbour) < args.clustersize:
                         break
                     else:
                         hop_neighbour = []
                     hoppingDistance -= 1
-                
+
                 if len(hop_neighbour) == 0:
                     hop_neighbour = [var]
-                
-                for var2 in hop_neighbour:
 
+                for var2 in hop_neighbour:
                     ng.remove_node(var2)
                     Yset.append(var2)
-                    clusterY.append(var2) # list of all variables cluster so far.
+                    clusterY.append(var2)  # list of all variables cluster so far.
 
-                disjointSet.append(Yset) # list of lists
+                disjointSet.append(Yset)  # list of lists
             else:
                 if var not in clusterY:
                     disjointSet.append([var])
         else:
             disjointSet.append([var])
-    
+
     return disjointSet
 
-def learnCandidate(Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep = {}):
-    
-    candidateSkf = {}  # represents y_i and its corresponding learned candidate via decision tree.
 
-    
+def learnCandidate(
+    Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep={}
+):
+    candidateSkf = (
+        {}
+    )  # represents y_i and its corresponding learned candidate via decision tree.
 
     SkolemKnown = PosUnate + NegUnate + UniqueVars
 
     for var in SkolemKnown:
-
         if (args.multiclass) and (var in list(ng.nodes)):
             ng.remove_node(var)
-        
+
         for var in PosUnate:
             candidateSkf[var] = " 1 "
-        
+
         for var in NegUnate:
             candidateSkf[var] = " 0 "
-        
 
     disjointSet = createCluster(args, Yvar, SkolemKnown, ng)
-    
+
     for Yset in disjointSet:
         dependent = []
         for yvar in Yset:
-
             if not args.henkin:
-                depends_on_yvar = list(nx.ancestors(dg,yvar))
+                depends_on_yvar = list(nx.ancestors(dg, yvar))
                 depends_on_yvar.append(yvar)
                 dependent = dependent + depends_on_yvar
             else:
-                yvar_depends_on = list(nx.descendants(dg,yvar))
+                yvar_depends_on = list(nx.descendants(dg, yvar))
                 if yvar in list(yvar_depends_on):
                     yvar_depends_on.remove(yvar)
 
         if not args.henkin:
-
-            Yfeatname = list(set(Yvar)-set(dependent))
+            Yfeatname = list(set(Yvar) - set(dependent))
             featname = Xvar.copy()
-            samples_X = samples[:, (np.array(Xvar)-1)]
+            samples_X = samples[:, (np.array(Xvar) - 1)]
         else:
-
             Yfeatname = yvar_depends_on
             featname = HenkinDep[Yset[0]]
-            samples_X = samples[:, (np.array(HenkinDep[Yset[0]])-1)]
-            
+            samples_X = samples[:, (np.array(HenkinDep[Yset[0]]) - 1)]
 
         if len(Yfeatname) > 0:
-
             featname += Yfeatname
-            Samples_Y = samples[:,(np.array(Yfeatname)-1)]
-            featuredata = np.concatenate((samples_X, Samples_Y),axis=1)
+            Samples_Y = samples[:, (np.array(Yfeatname) - 1)]
+            featuredata = np.concatenate((samples_X, Samples_Y), axis=1)
 
         else:
-
             featuredata = samples_X
 
-        label = samples[:,(np.array(Yset)-1)]
+        label = samples[:, (np.array(Yset) - 1)]
         labeldata = binary_to_int(label)
 
-        assert(len(featname) == len(featuredata[0]))
-        assert(len(Yset) == len(labeldata[0]))
+        assert len(featname) == len(featuredata[0])
+        assert len(Yset) == len(labeldata[0])
 
-
-        functions, D_set = createDecisionTree(featname, featuredata, labeldata, Yset, args, Xvar, Yvar)
+        functions, D_set = createDecisionTree(
+            featname, featuredata, labeldata, Yset, args, Xvar, Yvar
+        )
 
         for var in functions.keys():
-            assert(var not in UniqueVars)
-            assert(var not in PosUnate)
-            assert(var not in NegUnate)
+            assert var not in UniqueVars
+            assert var not in PosUnate
+            assert var not in NegUnate
             candidateSkf[var] = functions[var]
-            D = list(set(D_set[var])-set(Xvar))
+            D = list(set(D_set[var]) - set(Xvar))
             for jvar in D:
                 dg.add_edge(var, jvar)
 
@@ -304,4 +352,4 @@ def learnCandidate(Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, 
     if args.verbose == 2:
         print(" c candidate functions are", candidateSkf)
 
-    return candidateSkf, dg    
+    return candidateSkf, dg

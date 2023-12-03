@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
 Copyright (C) 2021 Priyanka Golia, Subhajit Roy, and Kuldeep Meel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,139 +20,139 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-'''
+"""
 
 from src.DefinabilityChecker import DefinabilityChecker
 import networkx as nx
 
+
 def fileerr(msg, filename):
-  path = "error/" + filename;
-  with open(path, "a") as f:
-    f.write(msg)
+    path = "error/" + filename
+    with open(path, "a") as f:
+        f.write(msg)
 
-def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep = {}):
 
-	
-	'''
-	Calling Unique to find uniquely defined functions.
-	'''
+def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={}):
+    """
+    Calling Unique to find uniquely defined functions.
+    """
 
-	offset = 5*(len(Yvar)+len(Xvar))+100  #introducting new variables after each defination
-	
-	UniqueChecker = DefinabilityChecker(qdimacs_list,Yvar)
-	UniqueVars = []  # list of uniquely defined variables
-	UniqueDef = ''  # definations of uniquely defined variables
-	declare_wire = '' # defination will be  wire w_y_i = unique defination
+    offset = (
+        5 * (len(Yvar) + len(Xvar)) + 100
+    )  # introducting new variables after each defination
 
-	itr = 0
+    UniqueChecker = DefinabilityChecker(qdimacs_list, Yvar)
+    UniqueVars = []  # list of uniquely defined variables
+    UniqueDef = ""  # definations of uniquely defined variables
+    declare_wire = ""  # defination will be  wire w_y_i = unique defination
 
-	for yvar in Yvar:
+    itr = 0
 
-		if yvar in Unates:
-			itr += 1
-			continue
+    for yvar in Yvar:
+        if yvar in Unates:
+            itr += 1
+            continue
 
-		if not args.henkin:
+        if not args.henkin:
+            Ydependent = list(nx.ancestors(dg, yvar))
+            Ydependent.append(yvar)
+            """
+            There could be two ways to deciding depended variables at this stage,
+            find dependencies on the fly or use a predefined Yorder.
+            for our set of benchmarks, later one performed better.
+            """
+            # definingYvar = list(set(Yvar) - set(Ydependent))
+            definingYvar = Yvar[:itr]
+            defination = UniqueChecker.checkDefinability(
+                Xvar + definingYvar, int(yvar), offset
+            )
 
-			Ydependent = list(nx.ancestors(dg,yvar))
-			Ydependent.append(yvar)
-			'''
-			There could be two ways to deciding depended variables at this stage, 
-			find dependencies on the fly or use a predefined Yorder.
-			for our set of benchmarks, later one performed better.
-			'''
-			#definingYvar = list(set(Yvar) - set(Ydependent))
-			definingYvar = Yvar[:itr]
-			defination = UniqueChecker.checkDefinability( Xvar + definingYvar, int(yvar), offset)
-			
-		else:
-			definingYvar = list(nx.descendants(dg,yvar))
-			if yvar in definingYvar:
-				definingYvar.remove(yvar)
-			defination = UniqueChecker.checkDefinability( HenkinDep[yvar] + definingYvar, int(yvar), offset)
-			
-			
-		itr += 1
+        else:
+            definingYvar = list(nx.descendants(dg, yvar))
+            if yvar in definingYvar:
+                definingYvar.remove(yvar)
+            defination = UniqueChecker.checkDefinability(
+                HenkinDep[yvar] + definingYvar, int(yvar), offset
+            )
 
-		countoffset = 0
+        itr += 1
 
-		
-		if defination[0] == True:  #yvar is uniquely defined. 
+        countoffset = 0
 
-			'''
-			Defination is a list of lists that represents the defination of yvar
-			Each individual list represents a conjuction, where last literals is defined as the conjuction 
-			of all the literals before.
+        if defination[0] is True:  # yvar is uniquely defined.
+            """
+            Defination is a list of lists that represents the defination of yvar
+            Each individual list represents a conjuction, where last literals is defined as the conjuction
+            of all the literals before.
 
-			Example [2,3,8] corresponds to 8 = 2 & 3
-			
-			Defination might introduce new variables in between, which will considered as wires 
-			in the verilog format and they have exact definiation listed.
-			'''
-			
-			UniqueVars.append(yvar)
+            Example [2,3,8] corresponds to 8 = 2 & 3
 
-			for lists in defination[1]:
-				clause = lists[0]
-				clauseString = ''
+            Defination might introduce new variables in between, which will considered as wires
+            in the verilog format and they have exact definiation listed.
+            """
 
-				if isinstance(clause,list):
-					for defvar in clause:
+            UniqueVars.append(yvar)
 
-						if int(defvar) < 0:
-							clauseString += "~"
+            for lists in defination[1]:
+                clause = lists[0]
+                clauseString = ""
 
-						if abs(defvar) in Yvar:
+                if isinstance(clause, list):
+                    for defvar in clause:
+                        if int(defvar) < 0:
+                            clauseString += "~"
 
-							if abs(defvar) != yvar:
-								dg.add_edge(yvar,abs(int(defvar))) 
+                        if abs(defvar) in Yvar:
+                            if abs(defvar) != yvar:
+                                dg.add_edge(yvar, abs(int(defvar)))
 
-							clauseString += "w%s &" %(abs(defvar))
-							
-						elif abs(defvar) in Xvar:
-							clauseString += "i%s & " %(abs(defvar))
-							
-						else:
-							clauseString += "utemp%s &  " %(abs(defvar))
-							
-					if len(defination[1]) > 1:
+                            clauseString += "w%s &" % (abs(defvar))
 
-						if int(lists[1]) not in Yvar:
+                        elif abs(defvar) in Xvar:
+                            clauseString += "i%s & " % (abs(defvar))
 
-							countoffset += 1
-							declare_wire += "wire utemp%s;\n" %(lists[1])
-							UniqueDef += "assign utemp%s = %s;\n" %(lists[1],clauseString.strip("& "))
+                        else:
+                            clauseString += "utemp%s &  " % (abs(defvar))
 
-						else:
+                    if len(defination[1]) > 1:
+                        if int(lists[1]) not in Yvar:
+                            countoffset += 1
+                            declare_wire += "wire utemp%s;\n" % (lists[1])
+                            UniqueDef += "assign utemp%s = %s;\n" % (
+                                lists[1],
+                                clauseString.strip("& "),
+                            )
 
-							UniqueDef += "assign w%s = %s;\n" %(yvar, clauseString.strip("& "))
-					else:
+                        else:
+                            UniqueDef += "assign w%s = %s;\n" % (
+                                yvar,
+                                clauseString.strip("& "),
+                            )
+                    else:
+                        countoffset += 1
+                        defvar = clause[0]
+                        clauseString = ""
 
-						countoffset += 1
-						defvar = clause[0]
-						clauseString = ''
+                        if int(defvar) < 0:
+                            clauseString += "~"
 
-						if int(defvar) < 0:
-							clauseString += "~"
+                        if abs(defvar) in Xvar:
+                            clauseString += "i%s;\n" % (abs(defvar))
+                        elif abs(defvar) in Yvar:
+                            clauseString += "w%s;\n" % (abs(defvar))
+                        else:
+                            print("check unique defination")
+                            fileerr("check unique defination", args.input + ".err")
+                            exit()
 
-						if abs(defvar) in Xvar:
-							clauseString += "i%s;\n" %(abs(defvar))
-						elif abs(defvar) in Yvar:
-							clauseString += "w%s;\n" %(abs(defvar))
-						else:
-							print("check unique defination")
-							fileerr("check unique defination", args.input + ".err")
-							exit()
+                        UniqueDef += "assign w%s = %s" % (yvar, clauseString)
+                else:
+                    if clause > 0:
+                        UniqueDef += "assign w%s = 1'b1;\n" % (abs(clause))
+                    else:
+                        UniqueDef += "assign w%s = 1'b0;\n" % (abs(clause))
+                    countoffset += 1
 
-						UniqueDef += "assign w%s = %s" %(yvar, clauseString)
-				else:
+        offset += countoffset + 100
 
-					if clause > 0:
-						UniqueDef += "assign w%s = 1'b1;\n" %(abs(clause))
-					else:
-						UniqueDef += "assign w%s = 1'b0;\n" %(abs(clause))
-					countoffset += 1
-
-		offset += countoffset + 100
-	
-	return UniqueVars, declare_wire+UniqueDef, dg
+    return UniqueVars, declare_wire + UniqueDef, dg

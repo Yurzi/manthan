@@ -183,7 +183,7 @@ class Tokenzier:
 
     @staticmethod
     def is_lit_part(c: str) -> bool:
-        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d" or  c == "'"
+        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d" or c == "'"
 
     @staticmethod
     def is_lit_contine(c: str) -> bool:

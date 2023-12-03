@@ -1,9 +1,8 @@
 import pickle
 import os
 import numpy as np
-import subprocess as subp
 from typing import Self
-from src.converToPY import convert_skf_to_pyfunc, repair_skf_verilog, Module, Tokenzier
+from src.converToPY import convert_skf_to_pyfunc, Module, Tokenzier
 
 
 def mkdir(path):

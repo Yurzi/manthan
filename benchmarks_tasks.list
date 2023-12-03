@@ -1,0 +1,6 @@
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/fact7.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/max64.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/test.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/test_1.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/small-seq-fixpoint-5.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/usb-phy-fixpoint-1.qdimacs

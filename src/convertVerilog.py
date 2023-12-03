@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
 Copyright (C) 2021 Priyanka Golia, Subhajit Roy, and Kuldeep Meel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,158 +20,148 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-'''
+"""
 
 
 import networkx as nx
 
 
 def convert_verilog(args, Xvar, Yvar, dg):
+    """
+        Converts qdimacs or dqimacs to verilog format.
 
-	'''
-	Converts qdimacs or dqimacs to verilog format.
+        From
 
-	From
-
-	a 1 3 0
+        a 1 3 0
     e 2 4 0
-	1 2 0
-	3 4 0
-	4 5 0
+        1 2 0
+        3 4 0
+        4 5 0
 
-	to
+        to
 
-	module FORMULA(1, 3, 2, 4, out);
-	input 1;
-	input 3;
-	input 2;
-	input 4;
+        module FORMULA(1, 3, 2, 4, out);
+        input 1;
+        input 3;
+        input 2;
+        input 4;
 
-	wire t_1;
-	assign t_1 = 1 & 2;
+        wire t_1;
+        assign t_1 = 1 & 2;
 
-	wire t_2;
-	assign t_2 = 3 & 4;
+        wire t_2;
+        assign t_2 = 3 & 4;
 
-	wire t_3;
-	assign t_3 = 4 & 5;
+        wire t_3;
+        assign t_3 = 4 & 5;
 
-	assign out = t_1 & t_2 & t_3;
+        assign out = t_1 & t_2 & t_3;
 
-	endmodule
+        endmodule
 
-	'''
+    """
 
-	declare = 'module FORMULA( '
-	declare_input = ''
-	declare_wire = ''
-	assign_wire = ''
+    declare = "module FORMULA( "
+    declare_input = ""
+    declare_wire = ""
+    assign_wire = ""
 
-	
-	for xvar in Xvar:
-		declare += "%s," %(xvar)
-		declare_input += "input %s;\n" %(xvar)
-	
-	for yvar in Yvar:
-		declare += "%s," %(yvar)
-		declare_input += "input %s;\n" %(yvar)
+    for xvar in Xvar:
+        declare += "%s," % (xvar)
+        declare_input += "input %s;\n" % (xvar)
 
+    for yvar in Yvar:
+        declare += "%s," % (yvar)
+        declare_input += "input %s;\n" % (yvar)
 
+    with open(args.input, "r") as f:
+        lines = f.readlines()
+    f.close()
 
+    itr = 1
 
-	with open(args.input, 'r') as f:
-		lines = f.readlines()
-	f.close()
+    for line in lines:
+        line = line.strip(" ")
 
-	itr = 1
-	
+        if (line == "") or (line == "\n"):
+            continue
 
-	for line in lines:
+        if line.startswith("c "):
+            continue
 
-		line = line.strip(" ")
+        if line.startswith("p "):
+            continue
 
-		if (line == "") or (line == "\n"):
-			continue
+        if line.startswith("a"):
+            continue
 
-		if line.startswith("c "):
-			continue
+        if line.startswith("e"):
+            continue
 
-		if line.startswith("p "):
-			continue
+        if line.startswith("d "):
+            continue
 
+        declare_wire += "wire t_%s;\n" % (itr)
+        assign_wire += "assign t_%s = " % (itr)
+        itr += 1
 
-		if line.startswith("a"):
-			continue
+        clause_variable = line.strip(" \n").split(" ")[:-1]
+        for var in clause_variable:
+            if int(var) < 0:
+                assign_wire += "~%s | " % (abs(int(var)))
+            else:
+                assign_wire += "%s | " % (abs(int(var)))
 
-		if line.startswith("e"):
-			continue
+        assign_wire = assign_wire.strip("| ") + ";\n"
 
-		if line.startswith("d "):
-			continue
+        """
+        In multiclassification, in order to cluster variable, we need to create primal graph
+        in which if y_i and y_j share a clause
+        then there is an edge between them.
+        """
+        ng = nx.Graph()
 
-		declare_wire += "wire t_%s;\n" %(itr)
-		assign_wire += "assign t_%s = " %(itr)
-		itr += 1
+        if args.multiclass:
+            # used only if args.multiclass
+            for lit_1 in clause_variable:
+                lit_1 = abs(int(lit_1))
+                if lit_1 in Yvar:
+                    if lit_1 not in list(ng.nodes):
+                        ng.add_node(lit_1)
+                    for lit_2 in clause_variable:
+                        lit_2 = abs(int(lit_2))
+                        if (lit_1 != abs(lit_2)) and (lit_2 in Yvar):
+                            if lit_2 not in list(ng.nodes):
+                                ng.add_node(lit_2)
+                            if not ng.has_edge(lit_1, lit_2):
+                                ng.add_edge(lit_1, lit_2)
 
-		clause_variable = line.strip(" \n").split(" ")[:-1]
-		for var in clause_variable:
-			if int(var) < 0:
-				assign_wire += "~%s | " %(abs(int(var)))
-			else:
-				assign_wire += "%s | " %(abs(int(var)))
+    count_tempvariable = itr
 
-		assign_wire = assign_wire.strip("| ")+";\n"
-		
-		'''
-		In multiclassification, in order to cluster variable, we need to create primal graph
-		in which if y_i and y_j share a clause
-		then there is an edge between them. 
-		
-		'''
-		ng = nx.Graph()
+    declare += "out);\n"
+    declare_input += "output out;\n"
 
-		if args.multiclass:
-			 # used only if args.multiclass
-			for lit_1 in clause_variable:
-				lit_1 = abs(int(lit_1))
-				if lit_1 in Yvar:
-					if lit_1 not in list(ng.nodes):
-						ng.add_node(lit_1)
-					for lit_2 in clause_variable:
-						lit_2 = abs(int(lit_2))
-						if (lit_1 != abs(lit_2)) and (lit_2 in Yvar):
-							if lit_2 not in list(ng.nodes):
-								ng.add_node(lit_2)
-							if not ng.has_edge(lit_1, lit_2):
-								ng.add_edge(lit_1,lit_2)
+    temp_assign = ""
+    outstr = ""
 
+    itr = 1
+    while itr < count_tempvariable:
+        temp_assign += "t_%s & " % (itr)
+        if itr % 100 == 0:
+            declare_wire += "wire tcount_%s;\n" % (itr)
+            assign_wire += "assign tcount_%s = %s;\n" % (itr, temp_assign.strip("& "))
+            outstr += "tcount_%s & " % (itr)
+            temp_assign = ""
+        itr += 1
 
+    if temp_assign != "":
+        declare_wire += "wire tcount_%s;\n" % (itr)
+        assign_wire += "assign tcount_%s = %s;\n" % (itr, temp_assign.strip("& "))
+        outstr += "tcount_%s;\n" % (itr)
+    outstr = "assign out = %s" % (outstr)
 
-	count_tempvariable = itr
+    verilogformula = (
+        declare + declare_input + declare_wire + assign_wire + outstr + "endmodule\n"
+    )
 
-	declare += "out);\n"
-	declare_input += "output out;\n"
-
-	temp_assign = ''
-	outstr = ''
-
-	itr = 1
-	while itr < count_tempvariable:
-		temp_assign += "t_%s & " %(itr)
-		if itr % 100 == 0:
-			declare_wire += "wire tcount_%s;\n" %(itr)
-			assign_wire += "assign tcount_%s = %s;\n" %(itr,temp_assign.strip("& "))
-			outstr += "tcount_%s & " %(itr)
-			temp_assign = ''
-		itr += 1
-
-	if temp_assign != "":
-		declare_wire += "wire tcount_%s;\n" %(itr)
-		assign_wire += "assign tcount_%s = %s;\n" %(itr,temp_assign.strip("& "))
-		outstr += "tcount_%s;\n" %(itr)
-	outstr = "assign out = %s" %(outstr)
-
-
-	verilogformula = declare + declare_input + declare_wire + assign_wire + outstr +"endmodule\n"
-
-	return verilogformula, dg, ng
+    return verilogformula, dg, ng
