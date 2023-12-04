@@ -845,7 +845,7 @@ if __name__ == "__main__":
 
     try:
         manthan(args, config)
-    except Exception as e:
+    except AssertionError as e:
         print(" c Manthan crashed")
         print(" c error", e)
         log_entry.exit_after_expection = True
