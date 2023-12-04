@@ -26,10 +26,11 @@ def has_result(file: str | os.PathLike) -> bool:
                         log_obj = LogEntry.from_file(filename)
                     except Exception as e:
                         print(f"Found bad log: {filename}, Error: {e}")
-                        continue
+                        return False
                     if log_obj.exit_at_progress:
                         print(f"Found exit_at_progress: {filename}")
                         continue
+                        return False
 
                     return True
     return False
