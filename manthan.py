@@ -60,7 +60,7 @@ def handle_exit(signal, frame):
     for child in p.children(recursive=True):
         child.terminate()
 
-    sys.exit(int(signal))
+    sys.exit(-1)
 
 
 def logtime(inputfile, text):
