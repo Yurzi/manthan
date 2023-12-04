@@ -60,6 +60,7 @@ def handle_exit(signum, frame):
     for child in p.children(recursive=True):
         child.terminate()
 
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
     sys.exit(-2)
 
 
@@ -70,6 +71,7 @@ def handle_timout(signum, frame):
     for child in p.children(recursive=True):
         child.terminate()
 
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
     sys.exit(-1)
 
 
