@@ -23,39 +23,44 @@ THE SOFTWARE.
 """
 
 from __future__ import print_function
-import sys
-import os
-import math
-import random
+
 import argparse
-import copy
-from tabnanny import verbose
-import tempfile
-import numpy as np
-from numpy import count_nonzero
-from sklearn import tree
-import collections
-import subprocess as subprocess
-import time
-import networkx as nx
-import pydotplus
+import atexit
 import configparser
+import os
+import sys
+import tempfile
+import time
+import signal
+import psutil
 
-from dependencies.rc2 import RC2Stratified
+import networkx as nx
+import numpy as np
 
-
-from pysat.formula import WCNF
-
-from collections import OrderedDict
+from src.candidateSkolem import learnCandidate
 from src.convertVerilog import convert_verilog
-from src.preprocess import *
+from src.createSkolem import (addSkolem, createErrorFormula, createSkolem,
+                              createSkolemfunction, skolemfunction_preprocess,
+                              verify)
+from src.generateSamples import computeBias, generatesample
+from src.logUtils import (LogEntry, get_from_file, get_inputfile_contenet,
+                          set_run_pid, unset_run_pid)
+from src.preprocess import convertcnf, parse, preprocess
+from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
+                        repair, updateSkolem)
 
-from src.createSkolem import *
-from src.generateSamples import *
-from src.candidateSkolem import *
-from src.repair import *
 
-from src.logUtils import *
+log_entry = LogEntry()
+
+
+def handle_exit(signal, frame):
+    print(" c Manthan interrupted")
+    log_entry.exit_after_timeout = True
+    p = psutil.Process()
+    for child in p.children(recursive=True):
+        child.terminate()
+
+    sys.exit(int(signal))
 
 
 def logtime(inputfile, text):
@@ -73,7 +78,7 @@ def mkdir(path):
 def check_config(config):
     if config.has_option("ITP-Path", "itp_path"):
         sys.path.append(config["ITP-Path"]["itp_path"])
-        from src.callUnique import find_unique_function
+        # from src.callUnique import find_unique_function
     else:
         print("c could not find itp module")
         print("c check unique installation")
@@ -84,7 +89,8 @@ def check_config(config):
 
     if not config.has_section("Dependencies-Path"):
         print(
-            " c Did not install dependencies from source code, using precomplied binaries"
+            " c Did not install dependencies from source code,",
+            "using precomplied binaries"
         )
         config.add_section("Dependencies-Path")
         config.set(
@@ -148,9 +154,6 @@ def manthan(args, config, queue=None):
         sys.path.append(config["ITP-Path"]["itp_path"])
         from src.callUnique import find_unique_function
 
-    set_run_pid(args.input)
-    log_entry = LogEntry()
-
     print(" c parsing")
     start_time = time.time()
 
@@ -202,7 +205,8 @@ def manthan(args, config, queue=None):
         start_time_preprocess = time.time()
 
         """
-        We find constants functions only if the existentially quantified variables are less then 20000
+        We find constants functions
+        only if the existentially quantified variables are less then 20000
         else it takes way much time to find the constant functions.
         """
 
@@ -278,8 +282,6 @@ def manthan(args, config, queue=None):
         if args.logtime:
             logtime(inputfile_name, "totaltime:" + str(end_time - start_time))
 
-        unset_run_pid(args.input)
-        log_entry.to_file()
         return
         # exit()
 
@@ -314,7 +316,8 @@ def manthan(args, config, queue=None):
         UniqueVars = []
         UniqueDef = ""
         print(
-            " c finding unique function is disabled. To find unique functions please use -- unique"
+            " c finding unique function is disabled.",
+            "To find unique functions please use -- unique"
         )
 
     if len(Unates) + len(UniqueVars) == len(Yvar):
@@ -335,8 +338,6 @@ def manthan(args, config, queue=None):
         if args.logtime:
             logtime(inputfile_name, "totaltime:" + str(end_time - start_time))
 
-        unset_run_pid(args.input)
-        log_entry.to_file()
         return
 
     """
@@ -358,7 +359,8 @@ def manthan(args, config, queue=None):
 
     """
     We can either choose uniform sampler or weighted sampler.
-    In case of weighted sampling, we need to find adaptive weights for each positive literals
+    In case of weighted sampling,
+    we need to find adaptive weights for each positive literals
     including X and Y.
     """
 
@@ -436,8 +438,10 @@ def manthan(args, config, queue=None):
     print(" c generated samples.. learning candidate functions via decision learning")
 
     """
-    we need verilog file for repairing the candidates, hence first let us convert the qdimacs to verilog
-    ng is used only if we are doing multiclassification. It has an edge only if y_i and y_j share a clause
+    we need verilog file for repairing the candidates,
+    hence first let us convert the qdimacs to verilog
+    ng is used only if we are doing multiclassification.
+    It has an edge only if y_i and y_j share a clause
     this is used to cluster the variables for which functions could be learned together.
     """
 
@@ -464,7 +468,7 @@ def manthan(args, config, queue=None):
     log_entry.leanskf_time = end_time_learn - start_time_learn
 
     """
-    YvarOrder is a total order of Y variables that represents interdependecies among Y. 
+    YvarOrder is a total order of Y variables that represents interdependecies among Y.
     """
 
     YvarOrder = np.array(list(nx.topological_sort(dg)))
@@ -489,7 +493,8 @@ def manthan(args, config, queue=None):
     log_entry.errorformula_out = error_content
 
     """
-    We use maxsat to identify the candidates to repair. We are converting specification as a hard constraint for maxsat.
+    We use maxsat to identify the candidates to repair.
+    We are converting specification as a hard constraint for maxsat.
     """
     maxsatWt, maxsatcnf, cnfcontent = maxsatContent(
         cnfcontent, (len(Xvar) + len(Yvar)), (len(PosUnate) + len(NegUnate))
@@ -612,10 +617,11 @@ def manthan(args, config, queue=None):
                 )
 
             """
+            if we encounter too many repair candidates
+            while repair the previous identifed candidates ind,
 
-            if we encounter too many repair candidates while repair the previous identifed candidates ind, 
-            we call lexmaxsat to identify nicer candidates to repair in accordance with the dependencies.
-            
+            we call lexmaxsat to identify nicer candidates to repair
+            in accordance with the dependencies.
             """
 
             if lexflag and args.lexmaxsat:
@@ -665,7 +671,7 @@ def manthan(args, config, queue=None):
                     )
 
             """
-            update the repair candidates in the candidate Skolem 
+            update the repair candidates in the candidate Skolem
             """
 
             updateSkolem(repairfunctions, countRefine, sigma[2], inputfile_name, Yvar)
@@ -688,9 +694,6 @@ def manthan(args, config, queue=None):
         log_entry.exit_after_leanskf = True
     else:
         log_entry.exit_after_refine = True
-
-    unset_run_pid(args.input)
-    log_entry.to_file()
     # log_entry.write_middle_out()
 
 
@@ -731,7 +734,8 @@ if __name__ == "__main__":
         "--adaptivesample",
         type=int,
         default=1,
-        help="required to enable = 1/disable = 0  adaptive weighted sampling. Default is 1 ",
+        help=("required to enable = 1/disable = 0"
+              + "adaptive weighted sampling. Default is 1 "),
         dest="adaptivesample",
     )
     parser.add_argument(
@@ -742,7 +746,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--maxsamples",
         type=int,
-        help="num of samples used to learn the candidates. Takes int value. If not used, Manthan will decide value as per |Y|",
+        help=("num of samples used to learn the candidates."
+              + "Takes int value. If not used, Manthan will decide value as per |Y|"),
         dest="maxsamples",
     )
     parser.add_argument(
@@ -754,27 +759,34 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--multiclass",
-        help="to learn a subset of existentially quantified variables together use --multiclass ",
+        help=("to learn a subset of existentially quantified variables together"
+              + " use --multiclass "),
         action="store_true",
     )
     parser.add_argument(
         "--lexmaxsat",
-        help="to use lexicographical maxsat to find candidates to repair use --lexmaxsat ",
+        help=("to use lexicographical maxsat to find candidates to repair use "
+              + "--lexmaxsat "),
         action="store_true",
     )
     parser.add_argument(
         "--henkin",
-        help="if you have dqdimacs instead of qdimacs, and would like to learn Henkin functions use --henkin",
+        help=("if you have dqdimacs instead of qdimacs, "
+              + "and would like to learn Henkin functions use --henkin"),
         action="store_true",
     )
     parser.add_argument(
         "--logtime",
-        help="to log time taken in each phase of manthan in <inputfile>_timedetails file use --logtime",
+        help=("to log time taken in each phase of manthan "
+              + "in <inputfile>_timedetails file use --logtime"),
         action="store_true",
     )
     parser.add_argument(
         "--hop",
-        help="if learning candidates via multiclassification, hop distances in primal graph is used to cluster existentially quantified variables together, use --hop <int> to define hop distance. Default is 3",
+        help=("if learning candidates via multiclassification, "
+              + "hop distances in primal graph "
+              + "is used to cluster existentially quantified variables together,"
+              + "use --hop <int> to define hop distance. Default is 3"),
         type=int,
         default=3,
         dest="hop",
@@ -782,7 +794,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--clustersize",
         type=int,
-        help="maximum number of existentially quantified variables in a subset to be learned together via multiclassfication. Default is 8",
+        help=("maximum number of existentially quantified variables in a subset"
+              + "to be learned together via multiclassfication. Default is 8"),
         default=8,
         dest="clustersize",
     )
@@ -798,10 +811,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    set_run_pid(args.input)
+    atexit.register(log_entry.to_file)
+    atexit.register(unset_run_pid, args.input)
+    atexit.register(print, " c Manthan exited")
+
+    signal.signal(signal.SIGALRM, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+
     print(" c configuring dependency paths")
     """
     Paths of dependencies are set.
-    if installed by source then their corresponding 
+    if installed by source then their corresponding
     paths are read by "manthan_dependencies.cfg"
     else default is dependencies folder.
     """
@@ -811,4 +832,10 @@ if __name__ == "__main__":
 
     print(" c starting Manthan")
     mkdir("out")
-    manthan(args, config)
+
+    try:
+        manthan(args, config)
+    except Exception as e:
+        print(" c Manthan crashed")
+        print(" c error", e)
+        log_entry.exit_after_error = True

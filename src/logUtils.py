@@ -27,7 +27,7 @@ def get_inputfile_contenet(input_file):
 def set_run_pid(input_file):
     path = "run/" + input_file + ".pid"
     with open(path, "w") as f:
-        f.write("running")
+        f.write(str(os.getpid()))
 
 
 def unset_run_pid(input_file):
@@ -149,6 +149,8 @@ class LogEntry:
         return obj
 
     def to_file(self):
+        if self.output_verilog != "":
+            self.sat = True
         mkdir("log")
         path = "log/" + str(self.instance_name) + ".pkl"
         with open(path, "wb") as f:

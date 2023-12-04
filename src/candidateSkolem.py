@@ -26,10 +26,7 @@ import numpy as np
 from sklearn import tree
 import pydotplus
 import networkx as nx
-from collections import OrderedDict
-from numpy import count_nonzero
 import collections
-import copy
 
 
 def treepaths(
@@ -161,7 +158,7 @@ def createDecisionTree(featname, featuredata, labeldata, yvar, args, Xvar, Yvar)
     children_left = clf.tree_.children_left
     children_right = clf.tree_.children_right
     feature = clf.tree_.feature
-    threshold = clf.tree_.threshold
+    # threshold = clf.tree_.threshold
     leaves = children_left == -1
     leaves = np.arange(0, n_nodes)[leaves]
     node_depth = np.zeros(shape=n_nodes, dtype=np.int64)
