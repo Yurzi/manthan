@@ -53,8 +53,17 @@ from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
 log_entry = LogEntry()
 
 
-def handle_exit(signal, frame):
+def handle_exit(signum, frame):
     print(" c Manthan interrupted")
+    p = psutil.Process()
+    for child in p.children(recursive=True):
+        child.terminate()
+
+    sys.exit(-2)
+
+
+def handle_timout(signum, frame):
+    print(" c Manthan timed out")
     log_entry.exit_after_timeout = True
     p = psutil.Process()
     for child in p.children(recursive=True):
@@ -816,7 +825,7 @@ if __name__ == "__main__":
     atexit.register(unset_run_pid, args.input)
     atexit.register(print, " c Manthan exited")
 
-    signal.signal(signal.SIGALRM, handle_exit)
+    signal.signal(signal.SIGALRM, handle_timout)
     signal.signal(signal.SIGTERM, handle_exit)
 
     print(" c configuring dependency paths")
