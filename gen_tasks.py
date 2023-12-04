@@ -18,7 +18,11 @@ def has_result(file: str | os.PathLike) -> bool:
     for root, dirs, files in os.walk(log_dir):
         for file in files:
             if file.endswith(".pkl"):
-                log_obj = LogEntry.from_file(os.path.join(root, file))
+                try:
+                    log_obj = LogEntry.from_file(os.path.join(root, file))
+                except Exception as e:
+                    print(f"Found bad log: {file}, Error: {e}")
+                    continue
                 if log_obj.exit_at_progress:
                     print(f"Found exit_at_progress: {file}")
                     continue
