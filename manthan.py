@@ -55,23 +55,25 @@ log_entry = LogEntry()
 
 def handle_exit(signum, frame):
     print(" c Manthan interrupted")
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
     log_entry.exit_at_progress = True
     p = psutil.Process()
     for child in p.children(recursive=True):
         child.terminate()
 
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
     sys.exit(-2)
 
 
 def handle_timout(signum, frame):
     print(" c Manthan timed out")
+    signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
     log_entry.exit_after_timeout = True
     p = psutil.Process()
     for child in p.children(recursive=True):
         child.terminate()
 
-    signal.signal(signal.SIGALRM, signal.SIG_DFL)
     sys.exit(-1)
 
 
