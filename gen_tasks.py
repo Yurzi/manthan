@@ -20,6 +20,7 @@ def has_result(file: str | os.PathLike) -> bool:
             if file.endswith(".pkl"):
                 log_obj = LogEntry.from_file(os.path.join(root, file))
                 if log_obj.exit_at_progress:
+                    print(f"Found exit_at_progress: {file}")
                     continue
                           
                 file = file.split(".")[0:-1]

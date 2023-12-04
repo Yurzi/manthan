@@ -155,9 +155,13 @@ class LogEntry:
             self.sat = True
         mkdir("log")
         path = "log/" + str(self.instance_name) + ".pkl"
-        with open(path, "wb") as f:
+        try:
+            f = open(path, "wb")
             pickle.dump(self, f)
-        f.close()
+        except OSError:
+            print("OSError: " + path)
+        finally:
+            f.close()
 
     def write_middle_out(self):
         mkdir("log-middle")
