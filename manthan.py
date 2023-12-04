@@ -55,6 +55,7 @@ log_entry = LogEntry()
 
 def handle_exit(signum, frame):
     print(" c Manthan interrupted")
+    log_entry.exit_at_progress = True
     p = psutil.Process()
     for child in p.children(recursive=True):
         child.terminate()
@@ -847,4 +848,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(" c Manthan crashed")
         print(" c error", e)
-        log_entry.exit_after_error = True
+        log_entry.exit_after_expection = True

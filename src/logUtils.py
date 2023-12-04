@@ -69,6 +69,8 @@ class LogEntry:
         self.exit_after_refine = False
         self.exit_after_error = False
         self.exit_after_timeout = False
+        self.exit_after_expection = False
+        self.exit_at_progress = False
 
     def caculate_circuit_size(self, recaculate=False):
         if not recaculate and self.circuit_size != -1:
