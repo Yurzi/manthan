@@ -27,9 +27,18 @@ def has_result(file: str | os.PathLike) -> bool:
                     except Exception as e:
                         print(f"Found bad log: {filename}, Error: {e}")
                         return False
+           
                     if log_obj.exit_at_progress:
                         print(f"Found exit_at_progress: {filename}")
-                        continue
+                        return False
+                    if not any([log_obj.exit_after_preprocess,
+                                log_obj.exit_after_leanskf,
+                                log_obj.exit_after_refine,
+                                log_obj.exit_after_error,
+                                log_obj.exit_after_timeout,
+                                log_obj.exit_after_expection
+                                ]):
+                        print(f"Found unfinished: {filename}")
                         return False
 
                     return True

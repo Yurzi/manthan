@@ -27,6 +27,7 @@ if __name__ == "__main__":
         # "合理采样": list(),
         "总采样": list(),
         "退出阶段": list(),
+        "超时": list(),
         "备注": list(),
     }
 
@@ -51,13 +52,6 @@ if __name__ == "__main__":
         df_data["修复次数"].append(log_obj.repair_count)
         # df_data["合理采样"].append(log_obj.get_samples_acc()[0])
         df_data["总采样"].append(log_obj.num_samples)
-        if log_obj.exit_after_error:
-            df_data["备注"].append("外部程序错误")
-        elif log_obj.exit_after_timeout:
-            df_data["备注"].append("超时")
-        else:
-            df_data["备注"].append("正常退出")
-
         if log_obj.exit_after_preprocess:
             df_data["退出阶段"].append("Preprocess")
         elif log_obj.exit_after_leanskf:
@@ -66,6 +60,18 @@ if __name__ == "__main__":
             df_data["退出阶段"].append("Refine")
         else:
             df_data["退出阶段"].append("未知")
+
+        if log_obj.exit_after_timeout:
+            df_data["超时"].append("True")
+        else:
+            df_data["超时"].append("False")
+
+        if log_obj.exit_after_expection:
+            df_data["备注"].append("断言异常退出")
+        elif log_obj.exit_after_error:
+            df_data["备注"].append("外部程序错误")
+        else:
+            df_data["备注"].append("无错误")
 
     df = pd.DataFrame(df_data)
     df.to_excel("log.xlsx")
