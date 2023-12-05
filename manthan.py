@@ -51,12 +51,17 @@ from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
 
 
 log_entry = LogEntry()
+in_exit_progress = False
 
 
 def handle_exit(signum, frame):
-    print(" c Manthan interrupted")
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    global in_exit_progress
+    if in_exit_progress:
+        return
+    in_exit_progress = True
 
+    print(" c Manthan interrupted")
     log_entry.exit_at_progress = True
     p = psutil.Process()
     for child in p.children(recursive=True):
@@ -66,10 +71,15 @@ def handle_exit(signum, frame):
 
 
 def handle_timout(signum, frame):
-    print(" c Manthan timed out")
     signal.signal(signal.SIGALRM, signal.SIG_IGN)
+    global in_exit_progress
+    if in_exit_progress:
+        return
+    in_exit_progress = True
 
+    print(" c Manthan timed out")
     log_entry.exit_after_timeout = True
+
     p = psutil.Process()
     for child in p.children(recursive=True):
         child.terminate()
