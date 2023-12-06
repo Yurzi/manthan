@@ -31,10 +31,10 @@ def has_result(file: str | os.PathLike) -> bool:
                     if log_obj.exit_at_progress:
                         print(f"Found exit_at_progress: {filename}")
                         return False
+
                     if not any([log_obj.exit_after_preprocess,
                                 log_obj.exit_after_leanskf,
                                 log_obj.exit_after_refine,
-                                log_obj.exit_after_error,
                                 log_obj.exit_after_timeout,
                                 log_obj.exit_after_expection
                                 ]):
