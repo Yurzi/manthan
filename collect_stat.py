@@ -27,6 +27,7 @@ if __name__ == "__main__":
         # "合理采样": list(),
         "总采样": list(),
         "退出阶段": list(),
+        "有解": list(),
         "超时": list(),
         "备注": list(),
     }
@@ -60,6 +61,11 @@ if __name__ == "__main__":
             df_data["退出阶段"].append("Refine")
         else:
             df_data["退出阶段"].append("未知")
+
+        if log_obj.sat:
+            df_data["有解"].append("True")
+        else:
+            df_data["有解"].append("False")
 
         if log_obj.exit_after_timeout:
             df_data["超时"].append("True")
