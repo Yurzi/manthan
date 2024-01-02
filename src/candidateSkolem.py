@@ -648,7 +648,6 @@ class CustomMixLoss():
 
     def set_used_var(self, relative_var, indep_var: int):
         self.l2.set_used_var(relative_var, indep_var)
-        print(self.l2.expr)
 
     def __call__(self, predt: np.ndarray, dtrain: DMatrix):
         grad1, hess1 = self.l1(predt, dtrain)
