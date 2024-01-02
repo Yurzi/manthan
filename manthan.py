@@ -830,6 +830,13 @@ if __name__ == "__main__":
         default=1,
         dest="unique",
     )
+    parser.add_argument(
+        "--qdimacsstr"
+        + "if you have qdimacs as a string instead of file, use --qdimacsstr",
+        type=str,
+        default="",
+        dest="qdimacsstr",
+    )
     parser.add_argument("--timeout", type=int, default=7200, dest="timeout")
     parser.add_argument("input", help="input file")
 

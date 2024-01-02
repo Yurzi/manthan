@@ -40,6 +40,8 @@ def parse(args):
         lines = f.readlines()
     f.close()
 
+    args.qdimacsstr = "\n".join(lines)
+
     """
     Xvar is universally quantified variables
     Yvar is existentially quantified variables
