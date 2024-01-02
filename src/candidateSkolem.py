@@ -615,6 +615,8 @@ class CustomL2Loss():
                 # 将无法用到的变量设置为 0.5
                 self.expr = self.expr.subs(self.vars[var], 0.5)
 
+        self.expr = 1 - self.expr
+
         self.grad = sympy.diff(self.expr, self.vars[str(indep_var)])
         self.hess = sympy.diff(self.grad, self.vars[str(indep_var)])
 
