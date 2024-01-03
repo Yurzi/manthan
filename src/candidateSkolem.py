@@ -625,7 +625,6 @@ class CustomL2Loss():
         self.grad_compiled = sympy.lambdify(used_vars, self.grad, "numpy")
         self.hess_compiled = sympy.lambdify(used_vars, self.hess, "numpy")
 
-
     def __call__(self, predt: np.ndarray, dtrain: DMatrix):
         input = {}
         input[self.pred_y] = predt
@@ -684,13 +683,13 @@ def createXGBDecisionTree(featname,
     # custom_l2_loss = CustomL2Loss(args.qdimacsstr, samples, PosUnate, NegUnate)
     # custom_l2_loss.set_used_var(featname, yvar[0])
 
-    custom_mix_loss = CustomMixLoss(0.5, 0.5, args.qdimacsstr, samples, PosUnate, NegUnate)
-    custom_mix_loss.set_used_var(featname, yvar[0])
+    # custom_mix_loss = CustomMixLoss(0.5, 0.5, args.qdimacsstr, samples, PosUnate, NegUnate)
+    # custom_mix_loss.set_used_var(featname, yvar[0])
 
     xgb_clf = xgb.train(params=xgb_params,
                         dtrain=xgb_dtrain,
                         num_boost_round=1,
-                        obj=custom_mix_loss)
+                        obj=CustomL1Loss)
 
     # dump tree json
     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
