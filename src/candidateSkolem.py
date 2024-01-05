@@ -24,7 +24,6 @@ THE SOFTWARE.
 
 import collections
 import json
-from typing import Any
 
 import networkx as nx
 import numpy as np
@@ -443,7 +442,7 @@ class TreeNode:
             res["children"].append(self.right.__dict__())
 
         return res
-    
+
     def treepath(self, dependson, Xvar, Yvar, index, size, args):
         if self.is_leaf:
             if self.leaf >= 0:
@@ -630,14 +629,16 @@ class CustomL2Loss():
         input[self.pred_y] = predt
         index = 0
         for var in dtrain.feature_names:
-            input[self.input_vars[var]] = np.array(dtrain.get_data().toarray()[:, index])
+            input[self.input_vars[var]] = np.array(
+                dtrain.get_data().toarray()[:, index]
+                )
             index += 1
-            
+
         grad = self.grad_compiled(**input)
         hess = self.hess_compiled(**input)
 
         return grad, hess
-    
+
 
 class CustomMixLoss():
     def __init__(self, alpha, beta, qdimacs: str, samples, PosUnate, NegUnate):
@@ -658,13 +659,13 @@ class CustomMixLoss():
         hess = self.alpha * hess1 + self.beta * hess2
 
         return grad, hess
-    
+
 
 def createXGBDecisionTree(featname,
                           featuredata,
                           labeldata, yvar,
                           args,
-                          Xvar, 
+                          Xvar,
                           Yvar,
                           PosUnate,
                           NegUnate,
@@ -672,6 +673,9 @@ def createXGBDecisionTree(featname,
     xgb_feature_names = [str(featname[i]) for i in range(len(featname))]
     xgb_params = {
         "objective": "binary:logistic",
+        "nthread": 1,
+        "tree_method": "hist",
+        "device": "gpu",
     }
     xgb_dtrain = DMatrix(data=featuredata,
                          label=labeldata,
@@ -683,29 +687,36 @@ def createXGBDecisionTree(featname,
     # custom_l2_loss = CustomL2Loss(args.qdimacsstr, samples, PosUnate, NegUnate)
     # custom_l2_loss.set_used_var(featname, yvar[0])
 
-    # custom_mix_loss = CustomMixLoss(0.5, 0.5, args.qdimacsstr, samples, PosUnate, NegUnate)
+    # custom_mix_loss = CustomMixLoss(0.5,
+    #                                 0.5,
+    #                                 args.qdimacsstr,
+    #                                 samples,
+    #                                 PosUnate,
+    #                                 NegUnate)
     # custom_mix_loss.set_used_var(featname, yvar[0])
 
     xgb_clf = xgb.train(params=xgb_params,
                         dtrain=xgb_dtrain,
-                        num_boost_round=1,
-                        obj=CustomL1Loss)
+                        num_boost_round=1)
 
     # dump tree json
     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
     if args.showtrees:
         xgb_clf.dump_model("xgb_model.json", with_stats=True, dump_format="json")
 
-    assert len(tree_json) == 1
-    tree_dict = json.loads(tree_json[0])
-    tree = TreeNode()
-    tree.from_dict(tree_dict)
+    trees = []
+    for tree_str in tree_json:
+        tree_dict = json.loads(tree_str)
+        tree = TreeNode()
+        tree.from_dict(tree_dict)
+        trees.append(tree)
 
     D_dict = {}
     psi_dict = {}
 
     for i in range(len(yvar)):
         D = []
+        tree = trees[i]
         paths, D = tree.treepath(D, Xvar, Yvar, i, len(yvar), args)
 
         psi_i = ""
