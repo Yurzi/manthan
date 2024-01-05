@@ -7,3 +7,9 @@ pybind11[global]
 psutil
 pandas
 openpyxl
+scikit-learn
+scipy
+matplotlib
+sympy
+xgboost
+graphviz
