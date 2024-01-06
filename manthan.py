@@ -21,13 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-
 from __future__ import print_function
-
+import os
 import argparse
 import atexit
 import configparser
-import os
+
 import sys
 import tempfile
 import time
@@ -48,6 +47,8 @@ from src.logUtils import (LogEntry, get_from_file, get_inputfile_contenet,
 from src.preprocess import convertcnf, parse, preprocess
 from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
                         repair, updateSkolem)
+
+os.environ["OMP_THREAD_LIMIT"] = "1"
 
 
 log_entry = LogEntry()
