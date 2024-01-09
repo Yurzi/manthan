@@ -20,6 +20,7 @@ def CustomL1Loss(predt: np.ndarray, dtrain: DMatrix):
     hess : np.ndarray
         The second order gradients.
     """
+    predt = predt.reshape(-1, 1)
     label = dtrain.get_label()
     grad = 2 * (predt - label)
     hess = np.repeat(2, label.shape[0])

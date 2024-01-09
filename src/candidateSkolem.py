@@ -33,6 +33,7 @@ from sklearn import tree
 from xgboost import DMatrix
 
 from src.Utils import XGBoostTreeNode
+from src.customLoss import CustomL1Loss
 
 
 def treepaths(
@@ -331,8 +332,7 @@ def learnCandidate(
 
     return candidateSkf, dg
 
-    print(featuredata[:3])
-    print(labels[:3])
+
 def createXGBMultclassDecisionTree(featuredata, labels, args, Xvar, Yvar):
     xgb_feature_names = [str(Xvar[i]) for i in range(len(Xvar))]
     xgb_params = {
@@ -348,7 +348,9 @@ def createXGBMultclassDecisionTree(featuredata, labels, args, Xvar, Yvar):
 
     xgb_clf = xgb.train(params=xgb_params,
                         dtrain=xgb_dtrain,
-                        num_boost_round=1)
+                        num_boost_round=1,
+                        obj=CustomL1Loss
+                        )
 
     # dump tree json
     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
