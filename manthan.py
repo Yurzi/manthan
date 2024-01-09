@@ -499,7 +499,7 @@ def manthan(args, config, queue=None):
                            )
     l2_loss.compile()
 
-    loss_func = l1_loss
+    loss_func = l2_loss
 
     start_time_learn = time.time()
     log_entry.leanskf_start_time = start_time_learn
