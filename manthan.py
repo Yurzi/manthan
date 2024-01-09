@@ -181,6 +181,8 @@ def manthan(args, config, queue=None):
 
     print(" c parsing")
     start_time = time.time()
+    log_entry.total_start_time = start_time
+
 
     if args.henkin:
         Xvar, Yvar, HenkinDep, qdimacs_list, dg = parse(args)
@@ -228,6 +230,7 @@ def manthan(args, config, queue=None):
     if (args.preprocess) and (not (args.henkin)):
         print(" c preprocessing: finding unates (constant functions)")
         start_time_preprocess = time.time()
+        log_entry.preprocess_start_time = start_time_preprocess
 
         """
         We find constants functions
@@ -275,6 +278,7 @@ def manthan(args, config, queue=None):
             cnfcontent += "-%s 0\n" % (yvar)
 
         log_entry.perprocess_out = Unates
+        log_entry.preprocess_end_time = end_time_preprocess
         log_entry.preprocess_time = end_time_preprocess - start_time_preprocess
 
     else:
@@ -369,6 +373,7 @@ def manthan(args, config, queue=None):
     deciding the number of samples to be generated
     """
     start_time_datagen = time.time()
+    log_entry.datagen_start_time = start_time_datagen
 
     if not args.maxsamples:
         if len(Xvar) > 4000:
@@ -452,6 +457,7 @@ def manthan(args, config, queue=None):
     end_time_datagen = time.time()
 
     log_entry.datagen_out = samples
+    log_entry.datagen_end_time = end_time_datagen
     log_entry.datagen_time = end_time_datagen - start_time_datagen
 
     if args.logtime:
@@ -473,6 +479,7 @@ def manthan(args, config, queue=None):
     verilogformula, dg, ng = convert_verilog(args, Xvar, Yvar, dg)
 
     start_time_learn = time.time()
+    log_entry.leanskf_start_time = start_time_learn
 
     if not args.henkin:
         candidateSkf, dg = learnCandidate(
@@ -484,6 +491,7 @@ def manthan(args, config, queue=None):
         )
 
     end_time_learn = time.time()
+    log_entry.leanskf_end_time = end_time_learn
 
     if args.logtime:
         logtime(
@@ -528,6 +536,7 @@ def manthan(args, config, queue=None):
     countRefine = 0
 
     start_time_repair = time.time()
+    log_entry.refine_start_time = start_time_repair
 
     while True:
         now_time = time.time()
@@ -708,6 +717,7 @@ def manthan(args, config, queue=None):
             break
 
     end_time = time.time()
+    log_entry.refine_end_time = end_time
 
     if args.logtime:
         logtime(inputfile_name, "repair time:" + str(end_time - start_time_repair))

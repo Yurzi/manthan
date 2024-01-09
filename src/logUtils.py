@@ -1,8 +1,11 @@
-import pickle
 import os
-import numpy as np
+import pickle
+import time
 from typing import Self
-from src.converToPY import convert_skf_to_pyfunc, Module, Tokenzier
+
+import numpy as np
+
+from src.converToPY import Module, Tokenzier, convert_skf_to_pyfunc
 
 
 def mkdir(path):
@@ -59,6 +62,16 @@ class LogEntry:
         self.leanskf_time = 0
         self.refine_time = 0
         self.repair_count = 0
+        self.total_start_time = 0
+        self.total_end_time = 0
+        self.preprocess_start_time = 0
+        self.preprocess_end_time = 0
+        self.datagen_start_time = 0
+        self.datagen_end_time = 0
+        self.leanskf_start_time = 0
+        self.leanskf_end_time = 0
+        self.refine_start_time = 0
+        self.refine_end_time = 0
         # output
         self.output_verilog = ""
         self.circuit_size = -1
@@ -151,6 +164,7 @@ class LogEntry:
         return obj
 
     def to_file(self):
+        self.total_end_time = time.time()
         if self.output_verilog != "":
             self.sat = True
         mkdir("log")
