@@ -62,3 +62,120 @@ def negate(clauses, auxiliary_start=None):
 
 def equality(lit1, lit2, switch):
     return [[-switch, lit1, -lit2], [-switch, -lit1, lit2]]
+
+
+class XGBoostTreeNode:
+    def __init__(self):
+        self.nodeid: int = -1
+        self.depth: int = -1
+
+        self.parent = None
+        self.left = None
+        self.right = None
+
+        self.split = None
+        self.split_condition: float = 0
+
+        self.leaf = 0
+
+        self.is_leaf: bool = False
+
+    def from_dict(self, input):
+        # node id
+        self.nodeid = input["nodeid"]
+
+        if input.get("depth") is not None:
+            self.depth = input["depth"]
+        else:
+            if self.parent is not None:
+                self.depth = self.parent.depth + 1
+            else:
+                self.depth = 0
+        if input.get("split") is not None:
+            self.split = input["split"]
+        else:
+            self.split = None
+
+        if input.get("split_condition") is not None:
+            self.split_condition = input["split_condition"]
+        else:
+            self.split_condition = 0
+
+        if input.get("leaf") is not None:
+            self.leaf = input["leaf"]
+        else:
+            self.leaf = 0
+
+        if input.get("children") is not None:
+            self.is_leaf = False
+            for child in input["children"]:
+                if child["nodeid"] == input["yes"]:
+                    self.left = XGBoostTreeNode()
+                    self.left.parent = self
+                    self.left.from_dict(child)
+                elif child["nodeid"] == input["no"]:
+                    self.right = XGBoostTreeNode()
+                    self.right.parent = self
+                    self.right.from_dict(child)
+                else:
+                    raise ValueError("Invalid child node id")
+        else:
+            self.is_leaf = True
+
+    def __dict__(self):
+        res = {}
+        res["nodeid"] = self.nodeid
+        res["depth"] = self.depth
+        res["split"] = self.split
+        res["split_condition"] = self.split_condition
+        res["leaf"] = self.leaf
+        if not self.is_leaf:
+            res["children"] = []
+            res["yes"] = self.left.nodeid
+            res["no"] = self.right.nodeid
+
+            res["children"].append(self.left.__dict__())
+            res["children"].append(self.right.__dict__())
+
+        return res
+
+    def treepath(self, dependson, Xvar, Yvar, index, size, args):
+        if self.is_leaf:
+            if self.leaf >= 0:
+                return (["1"], dependson)
+            else:
+                return (["val=0"], dependson)
+
+        assert self.left is not None
+        left_subtree, dependson = self.left.treepath(
+            dependson, Xvar, Yvar, index, size, args
+        )
+        assert self.right is not None
+        right_subtree, dependson = self.right.treepath(
+            dependson, Xvar, Yvar, index, size, args
+        )
+
+        # conjunction of all the literal in a path where leaf node has label 1
+        # Dependson is list of Y variables on which candidate SKF of y_i depends
+        list_left = []
+        for leaf in left_subtree:
+            if leaf != "val=0":
+                if int(self.split) in Yvar:
+                    dependson.append(int(self.split))
+                    # the left part
+                    list_left.append("~w" + str(self.split) + " & " + leaf)
+                else:
+                    list_left.append("~i" + str(self.split) + " & " + leaf)
+
+        list_right = []
+        for leaf in right_subtree:
+            if leaf != "val=0":
+                if int(self.split) in Yvar:
+                    dependson.append(int(self.split))
+                    list_right.append("w" + str(self.split) + " & " + leaf)
+                else:
+                    list_right.append("i" + str(self.split) + " & " + leaf)
+
+        dependson = list(set(dependson))
+
+        return (list_left + list_right, dependson)
