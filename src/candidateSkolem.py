@@ -675,7 +675,7 @@ def createXGBDecisionTree(featname,
         "objective": "binary:logistic",
         "nthread": 1,
         "tree_method": "hist",
-        "device": "gpu",
+        "device": "cpu",
     }
     xgb_dtrain = DMatrix(data=featuredata,
                          label=labeldata,
