@@ -23,6 +23,7 @@ THE SOFTWARE.
 """
 
 from src.DefinabilityChecker import DefinabilityChecker
+from src.Utils import UniqueCalcMap
 import networkx as nx
 
 
@@ -45,6 +46,9 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
     UniqueVars = []  # list of uniquely defined variables
     UniqueDef = ""  # definations of uniquely defined variables
     declare_wire = ""  # defination will be  wire w_y_i = unique defination
+
+    declare_temp_vars = []
+    UniqueRawDef = {}
 
     itr = 0
 
@@ -96,9 +100,11 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
             for lists in defination[1]:
                 clause = lists[0]
                 clauseString = ""
+                clauseRawTokens = []
 
                 if isinstance(clause, list):
                     for defvar in clause:
+                        clauseRawTokens.append(defvar)
                         if int(defvar) < 0:
                             clauseString += "~"
 
@@ -118,12 +124,15 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
                         if int(lists[1]) not in Yvar:
                             countoffset += 1
                             declare_wire += "wire utemp%s;\n" % (lists[1])
+                            declare_temp_vars.append(lists[1])
+                            UniqueRawDef[lists[1]] = clauseRawTokens
                             UniqueDef += "assign utemp%s = %s;\n" % (
                                 lists[1],
                                 clauseString.strip("& "),
                             )
 
                         else:
+                            UniqueRawDef[yvar] = clauseRawTokens
                             UniqueDef += "assign w%s = %s;\n" % (
                                 yvar,
                                 clauseString.strip("& "),
@@ -132,6 +141,7 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
                         countoffset += 1
                         defvar = clause[0]
                         clauseString = ""
+                        clauseRawTokens = []
 
                         if int(defvar) < 0:
                             clauseString += "~"
@@ -144,15 +154,21 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
                             print("check unique defination")
                             fileerr("check unique defination", args.input + ".err")
                             exit()
+                        clauseRawTokens.append(defvar)
 
+                        UniqueRawDef[yvar] = clauseRawTokens
                         UniqueDef += "assign w%s = %s" % (yvar, clauseString)
                 else:
                     if clause > 0:
                         UniqueDef += "assign w%s = 1'b1;\n" % (abs(clause))
+                        UniqueRawDef[clause] = 1
                     else:
                         UniqueDef += "assign w%s = 1'b0;\n" % (abs(clause))
+                        UniqueRawDef[clause] = 0
                     countoffset += 1
 
         offset += countoffset + 100
 
-    return UniqueVars, declare_wire + UniqueDef, dg
+    calc_map = UniqueCalcMap(Xvar, Yvar, UniqueVars, declare_temp_vars, UniqueRawDef)
+
+    return UniqueVars, declare_wire + UniqueDef, dg, calc_map

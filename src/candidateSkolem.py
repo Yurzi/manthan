@@ -282,7 +282,17 @@ def createCluster(args, Yvar, SkolemKnown, ng):
 
 
 def learnCandidate(
-        Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep={}
+        Xvar,
+        Yvar,
+        UniqueVars,
+        PosUnate,
+        NegUnate,
+        samples,
+        loss_func,
+        dg,
+        ng,
+        args, 
+        HenkinDep={}
 ):
     # represents y_i and its corresponding learned candidate via decision tree.
     candidateSkf = {}
@@ -308,7 +318,8 @@ def learnCandidate(
     samples_X = samples[:, (np.array(Xvar) - 1)]
     samples_Y = samples[:, (np.array(YUnknown) - 1)]
 
-    functions, D_set = createXGBMultclassDecisionTree(samples_X,
+    functions, D_set = createXGBMultclassDecisionTree(loss_func,
+                                                      samples_X,
                                                       samples_Y,
                                                       args,
                                                       Xvar,
@@ -333,7 +344,7 @@ def learnCandidate(
     return candidateSkf, dg
 
 
-def createXGBMultclassDecisionTree(featuredata, labels, args, Xvar, Yvar):
+def createXGBMultclassDecisionTree(loss_func, featuredata, labels, args, Xvar, Yvar):
     xgb_feature_names = [str(Xvar[i]) for i in range(len(Xvar))]
     xgb_params = {
         "objective": "binary:logistic",
@@ -345,12 +356,17 @@ def createXGBMultclassDecisionTree(featuredata, labels, args, Xvar, Yvar):
     xgb_dtrain = DMatrix(data=featuredata,
                          label=labels,
                          feature_names=xgb_feature_names)
+    results = {}
 
     xgb_clf = xgb.train(params=xgb_params,
                         dtrain=xgb_dtrain,
                         num_boost_round=1,
-                        obj=CustomL1Loss
+                        obj=loss_func,
+                        # custom_metric=loss_func.metrics,
+                        # evals=[(xgb_dtrain, "train")],
+                        # evals_result=results
                         )
+
 
     # dump tree json
     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")

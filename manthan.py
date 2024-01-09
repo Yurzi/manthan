@@ -48,6 +48,8 @@ from src.preprocess import convertcnf, parse, preprocess
 from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
                         repair, updateSkolem)
 
+from src.customLoss import CustomL1Loss, CustomL2Loss
+
 os.environ["OMP_THREAD_LIMIT"] = "1"
 
 
@@ -320,11 +322,11 @@ def manthan(args, config, queue=None):
         start_time_unique = time.time()
 
         if args.henkin:
-            UniqueVars, UniqueDef, dg = find_unique_function(
+            UniqueVars, UniqueDef, dg, calcMap = find_unique_function(
                 args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep
             )
         else:
-            UniqueVars, UniqueDef, dg = find_unique_function(
+            UniqueVars, UniqueDef, dg, calcMap = find_unique_function(
                 args, qdimacs_list, Xvar, Yvar, dg, Unates
             )
 
@@ -456,6 +458,8 @@ def manthan(args, config, queue=None):
 
     end_time_datagen = time.time()
 
+    calcMap(samples=samples)
+
     log_entry.datagen_out = samples
     log_entry.datagen_end_time = end_time_datagen
     log_entry.datagen_time = end_time_datagen - start_time_datagen
@@ -477,17 +481,36 @@ def manthan(args, config, queue=None):
     """
 
     verilogformula, dg, ng = convert_verilog(args, Xvar, Yvar, dg)
+    SkolemKnown = PosUnate + NegUnate + UniqueVars
+    YUnknown = []
+    for var in Yvar:
+        if var not in SkolemKnown:
+            YUnknown.append(var)
+
+    l1_loss = CustomL1Loss()
+
+    generate customl2loss
+    l2_loss = CustomL2Loss(args.qdimacsstr,
+                           Xvar,
+                           YUnknown,
+                           PosUnate,
+                           NegUnate,
+                           calcMap
+                           )
+    l2_loss.compile()
+
+    loss_func = l1_loss
 
     start_time_learn = time.time()
     log_entry.leanskf_start_time = start_time_learn
 
     if not args.henkin:
         candidateSkf, dg = learnCandidate(
-            Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args
+            Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, loss_func, dg, ng, args
         )
     else:
         candidateSkf, dg = learnCandidate(
-            Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep
+            Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, loss_func, dg, ng, args, HenkinDep
         )
 
     end_time_learn = time.time()
