@@ -489,7 +489,7 @@ def manthan(args, config, queue=None):
 
     l1_loss = CustomL1Loss()
 
-    generate customl2loss
+    # generate customl2loss
     l2_loss = CustomL2Loss(args.qdimacsstr,
                            Xvar,
                            YUnknown,
@@ -498,7 +498,6 @@ def manthan(args, config, queue=None):
                            calcMap
                            )
     l2_loss.compile()
-
     loss_func = l2_loss
 
     start_time_learn = time.time()
