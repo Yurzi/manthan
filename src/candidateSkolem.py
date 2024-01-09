@@ -392,168 +392,168 @@ def createXGBMultclassDecisionTree(featuredata, labels, args, Xvar, Yvar):
     return psi_dict, D_dict
 
 
-def learnCandidate_origin(
-    Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep={}
-):
-    candidateSkf = (
-        {}
-    )  # represents y_i and its corresponding learned candidate via decision tree.
+# def learnCandidate_origin(
+#     Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args, HenkinDep={}
+# ):
+#     candidateSkf = (
+#         {}
+#     )  # represents y_i and its corresponding learned candidate via decision tree.
 
-    SkolemKnown = PosUnate + NegUnate + UniqueVars
+#     SkolemKnown = PosUnate + NegUnate + UniqueVars
 
-    for var in SkolemKnown:
-        if (args.multiclass) and (var in list(ng.nodes)):
-            ng.remove_node(var)
+#     for var in SkolemKnown:
+#         if (args.multiclass) and (var in list(ng.nodes)):
+#             ng.remove_node(var)
 
-        for var in PosUnate:
-            candidateSkf[var] = " 1 "
+#         for var in PosUnate:
+#             candidateSkf[var] = " 1 "
 
-        for var in NegUnate:
-            candidateSkf[var] = " 0 "
+#         for var in NegUnate:
+#             candidateSkf[var] = " 0 "
 
-    disjointSet = createCluster(args, Yvar, SkolemKnown, ng)
+#     disjointSet = createCluster(args, Yvar, SkolemKnown, ng)
 
-    for Yset in disjointSet:
-        dependent = []
-        for yvar in Yset:
-            if not args.henkin:
-                depends_on_yvar = list(nx.ancestors(dg, yvar))
-                depends_on_yvar.append(yvar)
-                dependent = dependent + depends_on_yvar
-            else:
-                yvar_depends_on = list(nx.descendants(dg, yvar))
-                if yvar in list(yvar_depends_on):
-                    yvar_depends_on.remove(yvar)
+#     for Yset in disjointSet:
+#         dependent = []
+#         for yvar in Yset:
+#             if not args.henkin:
+#                 depends_on_yvar = list(nx.ancestors(dg, yvar))
+#                 depends_on_yvar.append(yvar)
+#                 dependent = dependent + depends_on_yvar
+#             else:
+#                 yvar_depends_on = list(nx.descendants(dg, yvar))
+#                 if yvar in list(yvar_depends_on):
+#                     yvar_depends_on.remove(yvar)
 
-        if not args.henkin:
-            Yfeatname = list(set(Yvar) - set(dependent))
-            featname = Xvar.copy()
-            samples_X = samples[:, (np.array(Xvar) - 1)]
-        else:
-            Yfeatname = yvar_depends_on
-            featname = HenkinDep[Yset[0]]
-            samples_X = samples[:, (np.array(HenkinDep[Yset[0]]) - 1)]
+#         if not args.henkin:
+#             Yfeatname = list(set(Yvar) - set(dependent))
+#             featname = Xvar.copy()
+#             samples_X = samples[:, (np.array(Xvar) - 1)]
+#         else:
+#             Yfeatname = yvar_depends_on
+#             featname = HenkinDep[Yset[0]]
+#             samples_X = samples[:, (np.array(HenkinDep[Yset[0]]) - 1)]
 
-        if len(Yfeatname) > 0:
-            featname += Yfeatname
-            Samples_Y = samples[:, (np.array(Yfeatname) - 1)]
-            featuredata = np.concatenate((samples_X, Samples_Y), axis=1)
+#         if len(Yfeatname) > 0:
+#             featname += Yfeatname
+#             Samples_Y = samples[:, (np.array(Yfeatname) - 1)]
+#             featuredata = np.concatenate((samples_X, Samples_Y), axis=1)
 
-        else:
-            featuredata = samples_X
+#         else:
+#             featuredata = samples_X
 
-        label = samples[:, (np.array(Yset) - 1)]
-        labeldata = binary_to_int(label)
+#         label = samples[:, (np.array(Yset) - 1)]
+#         labeldata = binary_to_int(label)
 
-        assert len(featname) == len(featuredata[0])
-        assert len(Yset) == len(labeldata[0])
+#         assert len(featname) == len(featuredata[0])
+#         assert len(Yset) == len(labeldata[0])
 
-        # functions, D_set = createXGBDecisionTree(featname,
-        #                                          featuredata,
-        #                                          labeldata,
-        #                                          Yset,
-        #                                          args,
-        #                                          Xvar,
-        #                                          Yvar,
-        #                                          PosUnate,
-        #                                          NegUnate,
-        #                                          samples)
+#         # functions, D_set = createXGBDecisionTree(featname,
+#         #                                          featuredata,
+#         #                                          labeldata,
+#         #                                          Yset,
+#         #                                          args,
+#         #                                          Xvar,
+#         #                                          Yvar,
+#         #                                          PosUnate,
+#         #                                          NegUnate,
+#         #                                          samples)
 
-        functions, D_set = createDecisionTree(
-            featname, featuredata, labeldata, Yset, args, Xvar, Yvar
-        )
+#         functions, D_set = createDecisionTree(
+#             featname, featuredata, labeldata, Yset, args, Xvar, Yvar
+#         )
 
-        for var in functions.keys():
-            assert var not in UniqueVars
-            assert var not in PosUnate
-            assert var not in NegUnate
-            candidateSkf[var] = functions[var]
-            D = list(set(D_set[var]) - set(Xvar))
-            for jvar in D:
-                dg.add_edge(var, jvar)
+#         for var in functions.keys():
+#             assert var not in UniqueVars
+#             assert var not in PosUnate
+#             assert var not in NegUnate
+#             candidateSkf[var] = functions[var]
+#             D = list(set(D_set[var]) - set(Xvar))
+#             for jvar in D:
+#                 dg.add_edge(var, jvar)
 
-    if args.verbose:
-        print(" c generated candidate functions for all variables.")
+#     if args.verbose:
+#         print(" c generated candidate functions for all variables.")
 
-    if args.verbose == 2:
-        print(" c candidate functions are", candidateSkf)
+#     if args.verbose == 2:
+#         print(" c candidate functions are", candidateSkf)
 
-    return candidateSkf, dg
+#     return candidateSkf, dg
 
 
-def createXGBDecisionTree(featname,
-                          featuredata,
-                          labeldata, yvar,
-                          args,
-                          Xvar,
-                          Yvar,
-                          PosUnate,
-                          NegUnate,
-                          samples):
-    xgb_feature_names = [str(featname[i]) for i in range(len(featname))]
-    xgb_params = {
-        "objective": "binary:logistic",
-        "nthread": 1,
-        "tree_method": "hist",
-        "device": "cpu",
-    }
-    xgb_dtrain = DMatrix(data=featuredata,
-                         label=labeldata,
-                         feature_names=xgb_feature_names)
-    # xgb_dtrain_gpu = QuantileDMatrix(data=featuredata,
-    #                                  label=labeldata,
-    #                                  feature_names=xgb_feature_names)
+# def createXGBDecisionTree(featname,
+#                           featuredata,
+#                           labeldata, yvar,
+#                           args,
+#                           Xvar,
+#                           Yvar,
+#                           PosUnate,
+#                           NegUnate,
+#                           samples):
+#     xgb_feature_names = [str(featname[i]) for i in range(len(featname))]
+#     xgb_params = {
+#         "objective": "binary:logistic",
+#         "nthread": 1,
+#         "tree_method": "hist",
+#         "device": "cpu",
+#     }
+#     xgb_dtrain = DMatrix(data=featuredata,
+#                          label=labeldata,
+#                          feature_names=xgb_feature_names)
+#     # xgb_dtrain_gpu = QuantileDMatrix(data=featuredata,
+#     #                                  label=labeldata,
+#     #                                  feature_names=xgb_feature_names)
 
-    # custom_l2_loss = CustomL2Loss(args.qdimacsstr, samples, PosUnate, NegUnate)
-    # custom_l2_loss.set_used_var(featname, yvar[0])
+#     # custom_l2_loss = CustomL2Loss(args.qdimacsstr, samples, PosUnate, NegUnate)
+#     # custom_l2_loss.set_used_var(featname, yvar[0])
 
-    # custom_mix_loss = CustomMixLoss(0.5,
-    #                                 0.5,
-    #                                 args.qdimacsstr,
-    #                                 samples,
-    #                                 PosUnate,
-    #                                 NegUnate)
-    # custom_mix_loss.set_used_var(featname, yvar[0])
+#     # custom_mix_loss = CustomMixLoss(0.5,
+#     #                                 0.5,
+#     #                                 args.qdimacsstr,
+#     #                                 samples,
+#     #                                 PosUnate,
+#     #                                 NegUnate)
+#     # custom_mix_loss.set_used_var(featname, yvar[0])
 
-    xgb_clf = xgb.train(params=xgb_params,
-                        dtrain=xgb_dtrain,
-                        num_boost_round=1)
+#     xgb_clf = xgb.train(params=xgb_params,
+#                         dtrain=xgb_dtrain,
+#                         num_boost_round=1)
 
-    # dump tree json
-    tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
-    if args.showtrees:
-        xgb_clf.dump_model("xgb_model.json", with_stats=True, dump_format="json")
+#     # dump tree json
+#     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
+#     if args.showtrees:
+#         xgb_clf.dump_model("xgb_model.json", with_stats=True, dump_format="json")
 
-    trees = []
-    for tree_str in tree_json:
-        tree_dict = json.loads(tree_str)
-        tree = XGBoostTreeNode()
-        tree.from_dict(tree_dict)
-        trees.append(tree)
+#     trees = []
+#     for tree_str in tree_json:
+#         tree_dict = json.loads(tree_str)
+#         tree = XGBoostTreeNode()
+#         tree.from_dict(tree_dict)
+#         trees.append(tree)
 
-    D_dict = {}
-    psi_dict = {}
+#     D_dict = {}
+#     psi_dict = {}
 
-    for i in range(len(yvar)):
-        D = []
-        tree = trees[i]
-        paths, D = tree.treepath(D, Xvar, Yvar, i, len(yvar), args)
+#     for i in range(len(yvar)):
+#         D = []
+#         tree = trees[i]
+#         paths, D = tree.treepath(D, Xvar, Yvar, i, len(yvar), args)
 
-        psi_i = ""
-        if tree.is_leaf:
-            if "val=0" in paths:
-                paths = ["0"]
-            else:
-                paths = ["1"]
+#         psi_i = ""
+#         if tree.is_leaf:
+#             if "val=0" in paths:
+#                 paths = ["0"]
+#             else:
+#                 paths = ["1"]
 
-        if len(paths) == 0:
-            paths.append("0")
-            D = []
+#         if len(paths) == 0:
+#             paths.append("0")
+#             D = []
 
-        for path in paths:
-            psi_i += "( " + path + " ) | "
+#         for path in paths:
+#             psi_i += "( " + path + " ) | "
 
-        D_dict[yvar[i]] = D
-        psi_dict[yvar[i]] = psi_i.strip("| ")
+#         D_dict[yvar[i]] = D
+#         psi_dict[yvar[i]] = psi_i.strip("| ")
 
-    return psi_dict, D_dict
+#     return psi_dict, D_dict
