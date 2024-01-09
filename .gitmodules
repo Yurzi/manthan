@@ -3,7 +3,7 @@
 	url = https://github.com/priyanka-golia/abc.git
 [submodule "dependencies/build_dependencies/open-wbo"]
 	path = dependencies/open-wbo
-	url = https://github.com/sat-group/open-wbo.git
+	url = https://github.com/Yurzi/open-wbo.git
 [submodule "dependencies/build_dependencies/manthan-preprocess"]
 	path = dependencies/manthan-preprocess
 	url = https://github.com/priyanka-golia/manthan-preprocess
