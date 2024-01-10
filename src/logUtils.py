@@ -59,6 +59,7 @@ class LogEntry:
         self.total_time = 0
         self.preprocess_time = 0
         self.datagen_time = 0
+        self.loss_func_compile_time = 0
         self.leanskf_time = 0
         self.refine_time = 0
         self.repair_count = 0
@@ -68,6 +69,8 @@ class LogEntry:
         self.preprocess_end_time = 0
         self.datagen_start_time = 0
         self.datagen_end_time = 0
+        self.loss_func_compile_start_time = 0
+        self.loss_func_compile_end_time = 0
         self.leanskf_start_time = 0
         self.leanskf_end_time = 0
         self.refine_start_time = 0

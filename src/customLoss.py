@@ -26,13 +26,14 @@ class CustomL1Loss:
             The second order gradients.
         """
         predt = predt.reshape(-1, 1)
-        label = dtrain.get_label()
+        label = dtrain.get_label().reshape(-1, 1)
         grad = 2 * (predt - label)
         hess = np.repeat(2, label.shape[0])
         return grad, hess
 
     def metrics(self, predt, dtrain):
-        y = (predt - dtrain.get_label()) ** 2
+        predt = predt.reshape(-1, 1)
+        y = (predt - dtrain.get_label().reshape(-1, 1)) ** 2
         return "L1-Loss", np.mean(y)
 
 
@@ -43,13 +44,13 @@ class CustomL2Loss:
                  labelname,
                  PosUnate,
                  NegUnate,
-                 UniqueCalcMap) -> None:
+                 full_samples) -> None:
         self.qdimacs = qdimacs
         self.clusters = []
         self.vars = {}
         self.expr = None
 
-        self.calc_map = UniqueCalcMap
+        self.full_samples = full_samples
         self.featname = featname
         self.labelname = labelname
         self.pos_vars = PosUnate
@@ -134,7 +135,7 @@ class CustomL2Loss:
             self.expr = expr
 
     def compile(self):
-        self.expr_compiled = sympy.lambdify(self.vars.values(), self.expr, "numpy")
+        # self.expr_compiled = sympy.lambdify(self.vars.values(), self.expr, "numpy")
         grad_res = 0
         hess_res = 0
 
@@ -158,10 +159,12 @@ class CustomL2Loss:
             predt_res[self.vars[str(yvar)].name] = predt[:, idx]
 
         for yvar in self.pos_vars:
-            predt_res[self.vars[str(yvar)].name] = np.ones(features_data.shape[0])
+            # predt_res[self.vars[str(yvar)].name] = np.ones(features_data.shape[0])
+            predt_res[self.vars[str(yvar)].name] = self.full_samples[:, yvar - 1]
 
         for yvar in self.neg_vars:
-            predt_res[self.vars[str(yvar)].name] = np.zeros(features_data.shape[0])
+            # predt_res[self.vars[str(yvar)].name] = np.zeros(features_data.shape[0])
+            predt_res[self.vars[str(yvar)].name] = self.full_samples[:, yvar - 1]
 
         left_var = (set([int(key) for key in self.vars.keys()])
                     - set(self.featname)
@@ -170,11 +173,12 @@ class CustomL2Loss:
                     - set(self.neg_vars))
 
         for var in left_var:
-            predt_res[self.vars[str(var)].name] = np.zeros(features_data.shape[0])
+            predt_res[self.vars[str(var)].name] = self.full_samples[:, var - 1]
 
-        samples = self.merge_from_dict(predt_res)
-        self.calc_map(samples)
-        predt_res = self.split_to_dict(samples)
+        # samples = self.merge_from_dict(predt_res)
+
+        # predt_res = self.split_to_dict(samples)
+        # print(predt_res)
 
         return predt_res
 
