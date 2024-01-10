@@ -357,17 +357,17 @@ def createXGBMultclassDecisionTree(loss_func, featuredata, labels, args, Xvar, Y
                          label=labels,
                          feature_names=xgb_feature_names)
     results = {}
-
+    print("c fit desciion tree")
     xgb_clf = xgb.train(params=xgb_params,
                         dtrain=xgb_dtrain,
                         num_boost_round=1,
                         obj=loss_func,
-                        # custom_metric=loss_func.metrics,
-                        # evals=[(xgb_dtrain, "train")],
-                        # evals_result=results
+                        custom_metric=loss_func.metrics,
+                        evals=[(xgb_dtrain, "train")],
+                        evals_result=results
                         )
 
-
+    print("c metrics: ", results["train"])
     # dump tree json
     tree_json = xgb_clf.get_dump(with_stats=True, dump_format="json")
     if args.showtrees:

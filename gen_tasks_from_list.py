@@ -59,7 +59,7 @@ if __name__ == "__main__":
         "output", type=str, default="tasks.list", help="output file name"
     )
 
-    format_str = "python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 "
+    format_str = "python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 --maxrepairitr 2000 "
 
     args = parser.parse_args()
     fd = open(args.output, "w")

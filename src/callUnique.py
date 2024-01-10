@@ -169,6 +169,4 @@ def find_unique_function(args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep={
 
         offset += countoffset + 100
 
-    calc_map = UniqueCalcMap(Xvar, Yvar, UniqueVars, declare_temp_vars, UniqueRawDef)
-
-    return UniqueVars, declare_wire + UniqueDef, dg, calc_map
+    return UniqueVars, declare_wire + UniqueDef, dg
