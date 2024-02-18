@@ -1,66 +1,13 @@
-from collections import defaultdict
+import ctypes
+import os
 from enum import Enum
 from typing import Self
 
-
-class Graph:
-    def __init__(self, vertexs: list) -> None:
-        self._graph: defaultdict = defaultdict(list)
-        self._vertexs = set(vertexs)
-
-        # init
-        for v in self._vertexs:
-            self._graph[v] = list()
-
-    def add_edge(self, u, v) -> None:
-        # check u, v
-        if u not in self._vertexs:
-            raise ValueError(f"Vertex {u} is not in graph")
-        if v not in self._vertexs:
-            raise ValueError(f"Vertex {v} is not in graph")
-
-        self._graph[u].append(v)
-
-    def topologic_sort(self) -> list:
-        income_count: defaultdict = defaultdict(lambda: 0)
-        visted: defaultdict = defaultdict(lambda: False)
-        result: list = list()
-
-        # init income_count
-        for v in self._vertexs:
-            for edge in self._graph[v]:
-                income_count[edge] += 1
-
-        pending_list = list()
-        for v in self._vertexs:
-            if income_count[v] == 0:
-                pending_list.append(v)
-
-        while len(pending_list) > 0:
-            v = pending_list.pop(0)
-            if visted[v]:
-                continue
-
-            visted[v] = True
-
-            for edge in self._graph[v]:
-                if income_count[edge] > 0:
-                    income_count[edge] -= 1
-
-                if income_count[edge] == 0:
-                    pending_list.append(edge)
-
-            result.append(v)
-
-        for v in self._vertexs:
-            if visted[v]:
-                continue
-            raise ValueError(f"Graph has loop, start vertex is {v}")
-
-        return result
+import networkx as nx
 
 
 class Token:
+
     class Kind(Enum):
         Keyword = "Keyword"
         Ident = "Ident"
@@ -90,6 +37,7 @@ class Token:
 
 
 class Tokenzier:
+
     class Cursor:
         EOF_CHAR = "\0"
 
@@ -183,7 +131,8 @@ class Tokenzier:
 
     @staticmethod
     def is_lit_part(c: str) -> bool:
-        return c.isdigit() or c == "_" or c == "b" or c == "o" or c == "h" or c == "d" or c == "'"
+        return c.isdigit(
+        ) or c == "_" or c == "b" or c == "o" or c == "h" or c == "d" or c == "'"
 
     @staticmethod
     def is_lit_contine(c: str) -> bool:
@@ -215,7 +164,9 @@ class Tokenzier:
 
     @staticmethod
     def is_keyword(lexme: str) -> bool:
-        if lexme in ["module", "input", "output", "wire", "assign", "endmodule"]:
+        if lexme in [
+                "module", "input", "output", "wire", "assign", "endmodule"
+        ]:
             return True
         return False
 
@@ -267,6 +218,7 @@ class Tokenzier:
 
 
 class StmLine:
+
     class Kind(Enum):
         Module = "module"
         Input = "input"
@@ -335,6 +287,7 @@ class StmLine:
 
 
 class Expression:
+
     def __init__(self, stm: StmLine) -> None:
         self.stm = stm
         self.expr: list[Token] = list()
@@ -413,6 +366,58 @@ class Expression:
         res = " ".join(res)
         return res
 
+    def gen_cppcode(self) -> str:
+        can_add_lit = True
+        res = []
+        for token in self.expr:
+            if token.kind is Token.Kind.And:
+                res.append("&&")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Or:
+                res.append("||")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Not:
+                res.append("!")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Xor:
+                res.append("!=")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Paren:
+                res.append(token.lexme)
+                can_add_lit = False
+                continue
+            if token.kind is Token.Kind.Eq:
+                res.append("=")
+                can_add_lit = True
+                continue
+            if token.kind is Token.Kind.Literal:
+                if can_add_lit is False:
+                    continue
+                literal = token.lexme.split("'")
+
+                if len(literal) > 1:
+                    literal = literal[-1][1:]
+                else:
+                    literal = literal[0]
+
+                if int(literal, 2) == 0:
+                    res.append("false")
+                elif int(literal, 2) == 1:
+                    res.append("true")
+                else:
+                    res.append(str(int(literal, 2)))
+                can_add_lit = False
+                continue
+
+            res.append(token.lexme)
+            can_add_lit = False
+        res = " ".join(res)
+        return res
+
     def gen_verilog(self) -> str:
         can_add_lit = True
         res = []
@@ -466,6 +471,7 @@ class Expression:
 
 
 class Module:
+
     def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
         self.name: Token | None = None
@@ -501,9 +507,8 @@ class Module:
         for token in tmp:
             vertex.append(token.lexme)
 
-        vertex.sort()
-
-        graph = Graph(vertex)
+        graph = nx.DiGraph()
+        graph.add_nodes_from(vertex)
         for expr in self.exprs:
             for token in expr.income:
                 if token.kind is Token.Kind.Literal:
@@ -511,16 +516,18 @@ class Module:
 
                 graph.add_edge(token.lexme, expr.outcome.lexme)
 
-        sorted_vars = graph.topologic_sort()
+        sorted_vars = list(nx.topological_sort(graph))
         sorted_exprs = list()
         for expr_out in sorted_vars:
             for expr in self.exprs:
                 if expr.outcome.lexme == expr_out:
                     sorted_exprs.append(expr)
-        assert len(sorted_exprs) == len(self.exprs), "some experssion is missing"
+        assert len(sorted_exprs) == len(
+            self.exprs), "some experssion is missing"
         self.exprs = sorted_exprs
 
     def gen_pycode(self) -> str:
+
         def special_sort(vars: list) -> list:
             for i in range(1, len(vars)):
                 for j in range(0, len(vars) - i):
@@ -558,6 +565,61 @@ class Module:
         ret_vars = ", ".join(ret_vars)
         ret = f"    return {ret_vars}"
         res.append(ret)
+
+        res = "\n".join(res)
+        return res
+
+    def gen_cppcode(self):
+
+        def special_sort(vars: list) -> list:
+            for i in range(1, len(vars)):
+                for j in range(0, len(vars) - i):
+                    var_1 = int(vars[j][1:])
+                    var_2 = int(vars[j + 1][1:])
+                    if var_1 > var_2:
+                        vars[j], vars[j + 1] = vars[j + 1], vars[j]
+            return vars
+
+        res = list()
+        # func def
+        var_list = [var.lexme for var in self.input_vars]
+        var_list.extend([var.lexme for var in self.output_vars])
+        var_list = special_sort(var_list)
+
+        res.append("bool* skf_func(bool* args)")
+        res.append("{")
+
+        for i in range(len(var_list)):
+            res.append("    bool " + var_list[i] + " = args[" + str(i) + "];")
+        # allocate memory for return
+        ret_vars = [var.lexme for var in self.output_vars]
+        ret_vars.extend([var.lexme for var in self.input_vars])
+        ret_vars = special_sort(ret_vars)
+
+        malloc_stm = f"    bool* ret = (bool*)malloc({len(ret_vars)} * sizeof(bool));"
+        memset_stm = f"    memset(ret, 0, {len(ret_vars)} * sizeof(bool));"
+        res.append(malloc_stm)
+        res.append(memset_stm)
+
+        # expr
+        exprs_def = list()
+        for var in self.inner_vars:
+            exprs_def.append(f"    bool {var.lexme};")
+        for expr in self.exprs:
+            exprs_def.append("    " + expr.gen_cppcode() + ";")
+
+        res.extend(exprs_def)
+
+        # return
+        ret_stms = list()
+        for i in range(len(ret_vars)):
+            ret = f"    ret[{i}] = {ret_vars[i]};"
+            ret_stms.append(ret)
+
+        ret_stms.append("    return ret;")
+
+        res.extend(ret_stms)
+        res.append("}")
 
         res = "\n".join(res)
         return res
@@ -610,6 +672,7 @@ def convert_skf_to_pyfunc(input: str) -> callable:
 
     module = Module(tokens)
     module.reorgnize()
+
     from types import FunctionType
 
     py_code = compile(module.gen_pycode(), "<string>", "exec")
@@ -627,6 +690,57 @@ def convert_skf_to_pycode(input: str) -> str:
     module.reorgnize()
 
     return module.gen_pycode()
+
+
+def convert_skf_to_cppcode(input: str) -> str:
+    tokens = list()
+    for token in Tokenzier(input):
+        tokens.append(token)
+
+    module = Module(tokens)
+    module.reorgnize()
+
+    func_code = module.gen_cppcode()
+    # add header
+    header = [
+        "#include <stdbool.h>", "#include <stdlib.h>", "#include <memory.h>"
+    ]
+    func_code = "\n".join(header) + "\n\n" + 'extern "C"' + "\n" + func_code
+    return func_code
+
+
+def convert_skf_to_forigen_func(input: str, instance_name: str = "skf") -> callable:
+    tokens = list()
+    for token in Tokenzier(input):
+        tokens.append(token)
+
+    module = Module(tokens)
+    module.reorgnize()
+
+    func_code = module.gen_cppcode()
+
+    # add header
+    header = [
+        "#include <stdbool.h>", "#include <stdlib.h>", "#include <memory.h>"
+    ]
+    func_code = "\n".join(header) + "\n\n" + 'extern "C"' + "\n" + func_code
+
+    cpp_filename = f"run/{instance_name}.cc"
+    lib_filename = f"run/lib{instance_name}.so"
+
+    with open(cpp_filename, "w") as f:
+        f.write(func_code)
+
+    cmd = f"gcc -fPIC -shared -o {lib_filename} {cpp_filename}"
+    os.system(cmd)
+
+    # use ctypes to load the shared library
+    lib = ctypes.cdll.LoadLibrary(lib_filename)
+    skf_func = lib.skf_func
+    skf_func.argtypes = [ctypes.POINTER(ctypes.c_bool)]
+    skf_func.restype = ctypes.POINTER(ctypes.c_bool)
+
+    return skf_func
 
 
 def repair_skf_verilog(input: str) -> str:

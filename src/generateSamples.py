@@ -96,7 +96,6 @@ def generatesample(args, config, num_samples, sampling_cnf, inputfile_name):
     tempoutputfile = tempfile.gettempdir() + "/" + inputfile_name + "_.txt"
 
     cmsgen = config["Dependencies-Path"]["cmsgen_path"]
-
     cmd = "%s %s --samplefile %s " % (cmsgen, tempcnffile, tempoutputfile)
     cmd += "--seed %s --samples %s " % (args.seed, int(num_samples))
 

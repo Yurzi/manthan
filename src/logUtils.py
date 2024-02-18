@@ -1,8 +1,12 @@
-import pickle
+import ctypes
 import os
-import numpy as np
+import pickle
+import re
 from typing import Self
-from src.converToPY import convert_skf_to_pyfunc, Module, Tokenzier
+
+import numpy as np
+
+from src.converToPY import Module, Tokenzier, convert_skf_to_forigen_func
 
 
 def mkdir(path):
@@ -35,7 +39,23 @@ def unset_run_pid(input_file):
     os.unlink(path=path)
 
 
+def to_valid_filename(s):
+    # 移除不允许的文件名字符
+    s = re.sub(r'[\\/*?:"<>|]', "", s)
+    # 也可以考虑将空格替换为下划线
+    s = s.replace(" ", "_")
+    # 删除其他不合法的字符，根据需要添加
+    s = re.sub(r'[^\w.-]', '', s)
+    # 防止以系统保留名称命名（例如，在Windows中）
+    reserved_names = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"}
+    if s.upper() in reserved_names:
+        s = "_" + s
+    # 限制文件名长度 (例如，255字符对大多数现代文件系统来说是安全的)
+    return s[:255]
+
+
 class LogEntry:
+
     def __init__(self) -> None:
         # input
         self.instance_name = ""
@@ -52,6 +72,16 @@ class LogEntry:
         self.datagen_out = None
         self.leanskf_out = None
         self.errorformula_out = None
+        self.maxsatWt = None
+        self.maxsatCnf = None
+        self.cnfcontent_1 = None
+        self.maxsatCnf_1 = list()
+        self.cnfcontent_2 = list()
+        self.maxsatCnf_2 = list()
+        self.cex_model = list()
+        self.indlist = list()
+        self.repair_loop = list()
+        self.repaired_func = list()
         # time
         self.total_time = 0
         self.preprocess_time = 0
@@ -90,24 +120,22 @@ class LogEntry:
 
     def get_samples_acc(self):
         if self.num_samples == 0:
-            return 0
+            return 0, 0
 
         if self.output_verilog == "":
             return 0, self.num_samples
-
-        func = convert_skf_to_pyfunc(self.output_verilog)
+        safe_instane_name = to_valid_filename(self.instance_name)
+        func = convert_skf_to_forigen_func(self.output_verilog, safe_instane_name)
         acc = 0
         for input in self.datagen_out:
             input = [bool(item) for item in input]
-            output = func(*input)
-            acc_flag = True
-            for i in range(0, len(input)):
-                if input[i] == output[i]:
-                    continue
-                else:
-                    acc_flag = False
-                    break
-            if acc_flag:
+            args = (ctypes.c_bool * len(input))(*input)
+            ret = func(args)
+            output = list()
+            for i in range(len(input)):
+                output.append(ret[i])
+            # compare input and output is the same
+            if np.array_equal(input, output):
                 acc += 1
 
         return acc, self.num_samples
@@ -166,13 +194,14 @@ class LogEntry:
     def write_middle_out(self):
         mkdir("log-middle")
 
-        cnfcontent_out_path = "log-middle/" + str(self.instance_name) + ".cnfcontent"
-        preprocess_out_path = "log-middle/" + str(self.instance_name) + ".preprocess"
+        cnfcontent_out_path = "log-middle/" + str(
+            self.instance_name) + ".cnfcontent"
+        preprocess_out_path = "log-middle/" + str(
+            self.instance_name) + ".preprocess"
         datagen_out_path = "log-middle/" + str(self.instance_name) + ".datagen"
         leanskf_out_path = "log-middle/" + str(self.instance_name) + ".leanskf"
-        errorformula_out_path = (
-            "log-middle/" + str(self.instance_name) + ".errorformula"
-        )
+        errorformula_out_path = ("log-middle/" + str(self.instance_name) +
+                                 ".errorformula")
 
         with open(cnfcontent_out_path, "w") as f:
             f.write(self.cnfcontent)

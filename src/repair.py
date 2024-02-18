@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from enum import unique
 import numpy as np
 import os
 import tempfile
@@ -47,12 +46,8 @@ def maxsatContent(cnfcontent, n, u):
             maxsatWt = numVar + 100
             line = line.replace(
                 "p cnf " + str(numVar) + " " + str(numCls),
-                "p wcnf "
-                + str(numVar)
-                + " "
-                + str(numCls + n + u)
-                + " "
-                + str(maxsatWt),
+                "p wcnf " + str(numVar) + " " + str(numCls + n + u) + " " +
+                str(maxsatWt),
             )
             cnfcontent = cnfcontent.replace(
                 "p cnf " + str(numVar) + " " + str(numCls),
@@ -128,9 +123,8 @@ def callRC2(maxsatcnf, modelyp, UniqueVars, Unates, Yvar, YvarOrder):
     return indlist
 
 
-def callMaxsat(
-    args, config, maxsatcnf, modelyp, SkolemKnown, Yvar, YvarOrder, inputfile_name
-):
+def callMaxsat(args, config, maxsatcnf, modelyp, SkolemKnown, Yvar, YvarOrder,
+               inputfile_name):
     itr = 0
     for var in Yvar:
         if var not in SkolemKnown:
@@ -142,7 +136,8 @@ def callMaxsat(
                 maxsatcnf += "%s %s 0\n" % (weight, var)
         itr += 1
 
-    maxsatformula = tempfile.gettempdir() + "/" + inputfile_name + "_maxsat.cnf"
+    maxsatformula = tempfile.gettempdir(
+    ) + "/" + inputfile_name + "_maxsat.cnf"
 
     outputfile = tempfile.gettempdir() + "/" + inputfile_name + "_o.txt"
 
@@ -190,10 +185,11 @@ def callMaxsat(
     for i in YvarOrder_ind:
         indlist.append(YvarOrder[i])
     indlist = np.array(indlist)
-    return indlist
+    return indlist, maxsatcnf
 
 
-def findUNSATCorePicosat(args, config, cnffile, unsatcorefile, satfile, Xvar, Yvar):
+def findUNSATCorePicosat(args, config, cnffile, unsatcorefile, satfile, Xvar,
+                         Yvar):
     picosat = config["Dependencies-Path"]["picosat_path"]
     cmd = "%s -s %s -V %s %s > %s " % (
         picosat,
@@ -256,8 +252,8 @@ def findUnsatCore(
             break
 
     repaircnf = repaircnf.replace(
-        str_tmp, "p cnf " + str(numVar) + " " + str(numCls + Count_Yvar + len(Xvar))
-    )
+        str_tmp,
+        "p cnf " + str(numVar) + " " + str(numCls + Count_Yvar + len(Xvar)))
     repaircnf += repair_Yvar_constraint
 
     cnffile = tempfile.gettempdir() + "/" + inputfile_name + "_unsat.cnf"
@@ -266,19 +262,20 @@ def findUnsatCore(
         f.write(repaircnf)
     f.close()
 
-    unsatcorefile = tempfile.gettempdir() + "/" + inputfile_name + "_unsatcore.txt"
+    unsatcorefile = tempfile.gettempdir(
+    ) + "/" + inputfile_name + "_unsatcore.txt"
     satfile = tempfile.gettempdir() + "/" + inputfile_name + "_sat.txt"
     exists = os.path.isfile(unsatcorefile)
 
     if exists:
         os.remove(unsatcorefile)
 
-    ret, clistx, clisty = findUNSATCorePicosat(
-        args, config, cnffile, unsatcorefile, satfile, Xvar, Yvar
-    )
+    ret, clistx, clisty = findUNSATCorePicosat(args, config, cnffile,
+                                               unsatcorefile, satfile, Xvar,
+                                               Yvar)
 
     if ret:
-        return (ret, [], clistx, clisty)
+        return (ret, [], clistx, clisty, repaircnf)
     else:
         cmsgen = config["Dependencies-Path"]["cmsgen_path"]
         cmd = "%s --seed %s --samples %s %s --samplefile %s > /dev/null 2>&1" % (
@@ -318,7 +315,7 @@ def findUnsatCore(
                 model.append(0)
         os.unlink(cnffile)
         os.unlink(satfile)
-        return ret, model, [], []
+        return ret, model, [], [], repaircnf
 
 
 def repair(
@@ -334,6 +331,7 @@ def repair(
     sigma,
     inputfile_name,
     HenkinDep={},
+    log_entry=None,
 ):
     modelyp = sigma[2]
     modelx = sigma[0]
@@ -343,6 +341,8 @@ def repair(
     repaired = []
     repairfunctions = {}
     ind_org = ind.copy()
+
+    log_repir_list = []
 
     satvar = []  # if G_k formal is SAT, need to find another set of variables.
 
@@ -395,7 +395,7 @@ def repair(
             print(" c repairing %s" % (repairvar))
 
         if not args.henkin:
-            ret, model, clistx, clisty = findUnsatCore(
+            ret, model, clistx, clisty, cnffile = findUnsatCore(
                 args,
                 config,
                 repair_Yvar_constraint,
@@ -406,7 +406,7 @@ def repair(
                 inputfile_name,
             )
         else:
-            ret, model, clistx, clisty = findUnsatCore(
+            ret, model, clistx, clisty, cnffile = findUnsatCore(
                 args,
                 config,
                 repair_Yvar_constraint,
@@ -416,6 +416,17 @@ def repair(
                 count_Yvar,
                 inputfile_name,
             )
+
+        log_repir = {
+            "repairvar": ind[itr - 1],
+            "repirepair_Yvar_constraint": repair_Yvar_constraint,
+            "model": model,
+            "cnffile": cnffile,
+            "clistx": clistx,
+            "clisty": clisty,
+        }
+
+        log_repir_list.append(log_repir)
 
         if ret == 0:
             """
@@ -493,21 +504,26 @@ def repair(
             assert repairfunctions[repairvar] != ""
     if args.verbose == 2:
         print(" c repaired functions", repairfunctions)
+
+    if log_entry is not None:
+        log_entry.repair_loop.append(log_repir_list)
     return 0, repairfunctions
 
 
 def updateSkolem(repairfunctions, countRefine, modelyp, inputfile_name, Yvar):
-    with open(tempfile.gettempdir() + "/" + inputfile_name + "_skolem.v", "r") as f:
+    with open(tempfile.gettempdir() + "/" + inputfile_name + "_skolem.v",
+              "r") as f:
         lines = f.readlines()
     f.close()
 
     skolemcontent = "".join(lines)
 
     for yvar in list(repairfunctions.keys()):
-        oldfunction = [line for line in lines if "assign w" + str(yvar) + " " in line][
-            0
-        ]
-        oldfunctionR = oldfunction.rstrip(";\n").lstrip("assign w%s = " % (yvar))
+        oldfunction = [
+            line for line in lines if "assign w" + str(yvar) + " " in line
+        ][0]
+        oldfunctionR = oldfunction.rstrip(";\n").lstrip("assign w%s = " %
+                                                        (yvar))
         repairformula = "wire beta%s_%s;\nassign beta%s_%s = ( %s );\n" % (
             yvar,
             countRefine,
@@ -517,7 +533,6 @@ def updateSkolem(repairfunctions, countRefine, modelyp, inputfile_name, Yvar):
         )
 
         yindex = np.where(np.array(Yvar) == yvar)[0][0]
-
         """
         if repair is to move from 0 to 1
             F(X) = F(X) \lor repair
@@ -541,8 +556,10 @@ def updateSkolem(repairfunctions, countRefine, modelyp, inputfile_name, Yvar):
                 yvar,
                 countRefine,
             )
-        skolemcontent = skolemcontent.replace(oldfunction, repairformula + newfunction)
+        skolemcontent = skolemcontent.replace(oldfunction,
+                                              repairformula + newfunction)
 
-    with open(tempfile.gettempdir() + "/" + inputfile_name + "_skolem.v", "w") as f:
+    with open(tempfile.gettempdir() + "/" + inputfile_name + "_skolem.v",
+              "w") as f:
         f.write(skolemcontent)
     f.close()

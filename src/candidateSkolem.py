@@ -326,9 +326,7 @@ def learnCandidate(
 
         label = samples[:, (np.array(Yset) - 1)]
         labeldata = binary_to_int(label)
-
         assert len(featname) == len(featuredata[0])
-        assert len(Yset) == len(labeldata[0])
 
         functions, D_set = createDecisionTree(
             featname, featuredata, labeldata, Yset, args, Xvar, Yvar

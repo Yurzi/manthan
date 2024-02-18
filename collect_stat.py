@@ -24,7 +24,7 @@ if __name__ == "__main__":
         "LearnSkf时间": list(),
         "Refine时间": list(),
         "修复次数": list(),
-        # "合理采样": list(),
+        "合理采样": list(),
         "总采样": list(),
         "退出阶段": list(),
         "有解": list(),
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         df_data["LearnSkf时间"].append(log_obj.leanskf_time)
         df_data["Refine时间"].append(log_obj.refine_time)
         df_data["修复次数"].append(log_obj.repair_count)
-        # df_data["合理采样"].append(log_obj.get_samples_acc()[0])
+        df_data["合理采样"].append(log_obj.get_samples_acc()[0])
         df_data["总采样"].append(log_obj.num_samples)
         if log_obj.exit_after_preprocess:
             df_data["退出阶段"].append("Preprocess")
@@ -79,5 +79,6 @@ if __name__ == "__main__":
         else:
             df_data["备注"].append("无错误")
 
-    df = pd.DataFrame(df_data)
-    df.to_excel("log.xlsx")
+        df = pd.DataFrame(df_data)
+        df.to_excel("log.xlsx")
+        df.to_csv("log.csv")

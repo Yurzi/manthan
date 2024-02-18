@@ -524,6 +524,10 @@ def manthan(args, config, queue=None):
         cnfcontent, (len(Xvar) + len(Yvar)), (len(PosUnate) + len(NegUnate))
     )
 
+    log_entry.maxsatWt = maxsatWt
+    log_entry.maxsatCnf = maxsatcnf
+    log_entry.cnfcontent_1 = cnfcontent
+
     countRefine = 0
 
     start_time_repair = time.time()
@@ -545,6 +549,8 @@ def manthan(args, config, queue=None):
         """
 
         check, sigma, ret = verify(args, config, Xvar, Yvar, inputfile_name)
+
+        log_entry.cex_model.append(sigma)
 
         if check == 0:
             print(" c error --- ABC network read fail")
@@ -587,7 +593,10 @@ def manthan(args, config, queue=None):
                 cnfcontent, maxsatWt, maxsatcnf, sigma[0], Xvar
             )
 
-            ind = callMaxsat(
+            log_entry.cnfcontent_2.append(repaircnf)
+            log_entry.maxsatCnf_1.append(maxsatcnfRepair)
+
+            ind, maxsatcnf_2 = callMaxsat(
                 args,
                 config,
                 maxsatcnfRepair,
@@ -597,6 +606,9 @@ def manthan(args, config, queue=None):
                 YvarOrder,
                 inputfile_name,
             )
+
+            log_entry.maxsatCnf_2.append(maxsatcnf_2)
+            log_entry.indlist.append(ind)
 
             if args.verbose >= 2:
                 print("candidates to repair", ind)
@@ -623,6 +635,7 @@ def manthan(args, config, queue=None):
                     UniqueVars + Unates,
                     sigma,
                     inputfile_name,
+                    log_entry=log_entry,
                 )
             else:
                 lexflag, repairfunctions = repair(
@@ -638,6 +651,7 @@ def manthan(args, config, queue=None):
                     sigma,
                     inputfile_name,
                     HenkinDep,
+                    log_entry,
                 )
 
             """
@@ -697,6 +711,8 @@ def manthan(args, config, queue=None):
             """
             update the repair candidates in the candidate Skolem
             """
+
+            log_entry.repaired_func.append(repairfunctions)
 
             updateSkolem(repairfunctions, countRefine, sigma[2], inputfile_name, Yvar)
 
