@@ -22,11 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import numpy as np
-from sklearn import tree
-import pydotplus
-import networkx as nx
 import collections
+
+import networkx as nx
+import numpy as np
+import pydotplus
+from sklearn import tree
 
 
 def treepaths(

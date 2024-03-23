@@ -28,27 +28,42 @@ import argparse
 import atexit
 import configparser
 import os
+import signal
 import sys
 import tempfile
 import time
-import signal
-import psutil
 
 import networkx as nx
 import numpy as np
+import psutil
 
 from src.candidateSkolem import learnCandidate
 from src.convertVerilog import convert_verilog
-from src.createSkolem import (addSkolem, createErrorFormula, createSkolem,
-                              createSkolemfunction, skolemfunction_preprocess,
-                              verify)
-from src.expermental_hook import fullsample
+from src.createSkolem import (
+    addSkolem,
+    createErrorFormula,
+    createSkolem,
+    createSkolemfunction,
+    skolemfunction_preprocess,
+    verify,
+)
+from src.expermental_hook import fullsample, learnRandomCandidate
 from src.generateSamples import computeBias, generatesample
-from src.logUtils import (LogEntry, get_from_file, get_inputfile_contenet,
-                          check_and_reset)
+from src.logUtils import (
+    LogEntry,
+    check_and_reset,
+    get_from_file,
+    get_inputfile_contenet,
+)
 from src.preprocess import convertcnf, parse, preprocess
-from src.repair import (addXvaluation, callMaxsat, callRC2, maxsatContent,
-                        repair, updateSkolem)
+from src.repair import (
+    addXvaluation,
+    callMaxsat,
+    callRC2,
+    maxsatContent,
+    repair,
+    updateSkolem,
+)
 
 log_entry = LogEntry()
 in_exit_progress = False
@@ -112,15 +127,20 @@ def check_config(config):
         exit()
 
     if not config.has_section("Dependencies-Path"):
-        print(" c Did not install dependencies from source code,",
-              "using precomplied binaries")
+        print(
+            " c Did not install dependencies from source code,",
+            "using precomplied binaries",
+        )
         config.add_section("Dependencies-Path")
-        config.set("Dependencies-Path", "openwbo_path",
-                   "./dependencies/static_bin/open-wbo")
-        config.set("Dependencies-Path", "cmsgen_path",
-                   "./dependencies/static_bin/cmsgen")
-        config.set("Dependencies-Path", "picosat_path",
-                   "./dependencies/static_bin/picosat")
+        config.set(
+            "Dependencies-Path", "openwbo_path", "./dependencies/static_bin/open-wbo"
+        )
+        config.set(
+            "Dependencies-Path", "cmsgen_path", "./dependencies/static_bin/cmsgen"
+        )
+        config.set(
+            "Dependencies-Path", "picosat_path", "./dependencies/static_bin/picosat"
+        )
         config.set(
             "Dependencies-Path",
             "preprocess_path",
@@ -141,12 +161,14 @@ def check_config(config):
             )
 
         if not config.has_option("Dependencies-Path", "cmsgen_path"):
-            config.set("Dependencies-Path", "cmsgen_path",
-                       "./dependencies/static_bin/cmsgen")
+            config.set(
+                "Dependencies-Path", "cmsgen_path", "./dependencies/static_bin/cmsgen"
+            )
 
         if not config.has_option("Dependencies-Path", "picosat_path"):
-            config.set("Dependencies-Path", "picosat_path",
-                       "./dependencies/static_bin/picosat")
+            config.set(
+                "Dependencies-Path", "picosat_path", "./dependencies/static_bin/picosat"
+            )
 
         if not config.has_option("Dependencies-Path", "preprocess_path"):
             config.set(
@@ -155,8 +177,7 @@ def check_config(config):
                 "./dependencies/static_bin/preprocess",
             )
 
-        if not config.has_option("Dependencies-Path",
-                                 "file_generation_cex_path"):
+        if not config.has_option("Dependencies-Path", "file_generation_cex_path"):
             config.set(
                 "Dependencies-Path",
                 "file_generation_cex_path",
@@ -194,10 +215,8 @@ def manthan(args, config, queue=None):
     """
 
     if args.verbose:
-        print(" c count X (universally quantified variables) variables",
-              len(Xvar))
-        print(" c count Y (existentially quantified variables) variables",
-              len(Yvar))
+        print(" c count X (universally quantified variables) variables", len(Xvar))
+        print(" c count Y (existentially quantified variables) variables", len(Yvar))
 
     if args.verbose >= 2:
         print(" c  X (universally quantified variables) variables", (Xvar))
@@ -232,9 +251,7 @@ def manthan(args, config, queue=None):
         if len(Yvar) < 20000:
             PosUnate, NegUnate = preprocess(cnffile_name, args, config)
         else:
-            print(
-                " c too many Y variables, let us proceed with Unique extraction\n"
-            )
+            print(" c too many Y variables, let us proceed with Unique extraction\n")
             PosUnate = []
             NegUnate = []
 
@@ -243,8 +260,8 @@ def manthan(args, config, queue=None):
         if args.logtime:
             logtime(
                 inputfile_name,
-                "preprocessing time:" +
-                str(end_time_preprocess - start_time_preprocess),
+                "preprocessing time:"
+                + str(end_time_preprocess - start_time_preprocess),
             )
 
         if args.verbose:
@@ -287,7 +304,8 @@ def manthan(args, config, queue=None):
         """
 
         log_entry.output_verilog = skolemfunction_preprocess(
-            inputfile_name, Xvar, Yvar, PosUnate, NegUnate)
+            inputfile_name, Xvar, Yvar, PosUnate, NegUnate
+        )
 
         end_time = time.time()
         log_entry.total_time = end_time - start_time
@@ -310,18 +328,19 @@ def manthan(args, config, queue=None):
 
         if args.henkin:
             UniqueVars, UniqueDef, dg = find_unique_function(
-                args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep)
+                args, qdimacs_list, Xvar, Yvar, dg, Unates, HenkinDep
+            )
         else:
             UniqueVars, UniqueDef, dg = find_unique_function(
-                args, qdimacs_list, Xvar, Yvar, dg, Unates)
+                args, qdimacs_list, Xvar, Yvar, dg, Unates
+            )
 
         end_time_unique = time.time()
 
         if args.logtime:
             logtime(
                 inputfile_name,
-                "unique function finding:" +
-                str(end_time_unique - start_time_unique),
+                "unique function finding:" + str(end_time_unique - start_time_unique),
             )
 
         if args.verbose:
@@ -332,16 +351,18 @@ def manthan(args, config, queue=None):
     else:
         UniqueVars = []
         UniqueDef = ""
-        print(" c finding unique function is disabled.",
-              "To find unique functions please use -- unique")
+        print(
+            " c finding unique function is disabled.",
+            "To find unique functions please use -- unique",
+        )
 
     if len(Unates) + len(UniqueVars) == len(Yvar):
         print(" c all Y variables are either unate or unique")
         print(" c found functions for all Y variables")
 
         log_entry.output_verilog = skolemfunction_preprocess(
-            inputfile_name, Xvar, Yvar, PosUnate, NegUnate, UniqueVars,
-            UniqueDef)
+            inputfile_name, Xvar, Yvar, PosUnate, NegUnate, UniqueVars, UniqueDef
+        )
 
         end_time = time.time()
         log_entry.total_time = end_time - start_time
@@ -428,12 +449,14 @@ def manthan(args, config, queue=None):
         if args.verbose >= 2:
             print(" c generating samples..")
 
-        samples = generatesample(args, config, num_samples,
-                                 weighted_sampling_cnf, inputfile_name)
+        samples = generatesample(
+            args, config, num_samples, weighted_sampling_cnf, inputfile_name
+        )
     else:
         print(" c generating uniform samples")
-        samples = generatesample(args, config, num_samples, sampling_cnf,
-                                 inputfile_name)
+        samples = generatesample(
+            args, config, num_samples, sampling_cnf, inputfile_name
+        )
 
     if args.fullsample:
         # read verilog from out/{instane_name}_skolem.v
@@ -452,9 +475,7 @@ def manthan(args, config, queue=None):
             "generating samples:" + str(end_time_datagen - start_time_datagen),
         )
 
-    print(
-        " c generated samples.. learning candidate functions via decision learning"
-    )
+    print(" c generated samples.. learning candidate functions via decision learning")
     """
     we need verilog file for repairing the candidates,
     hence first let us convert the qdimacs to verilog
@@ -467,13 +488,28 @@ def manthan(args, config, queue=None):
 
     start_time_learn = time.time()
 
-    if not args.henkin:
-        candidateSkf, dg = learnCandidate(Xvar, Yvar, UniqueVars, PosUnate,
-                                          NegUnate, samples, dg, ng, args)
+    if args.rand_candidate:
+        candidateSkf, dg = learnRandomCandidate(
+            Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args
+        )
     else:
-        candidateSkf, dg = learnCandidate(Xvar, Yvar, UniqueVars, PosUnate,
-                                          NegUnate, samples, dg, ng, args,
-                                          HenkinDep)
+        if not args.henkin:
+            candidateSkf, dg = learnCandidate(
+                Xvar, Yvar, UniqueVars, PosUnate, NegUnate, samples, dg, ng, args
+            )
+        else:
+            candidateSkf, dg = learnCandidate(
+                Xvar,
+                Yvar,
+                UniqueVars,
+                PosUnate,
+                NegUnate,
+                samples,
+                dg,
+                ng,
+                args,
+                HenkinDep,
+            )
 
     end_time_learn = time.time()
 
@@ -496,10 +532,10 @@ def manthan(args, config, queue=None):
     in a verilog format.
 
     """
-    createSkolem(candidateSkf, Xvar, Yvar, UniqueVars, UniqueDef,
-                 inputfile_name)
-    log_entry.leanskf_out = get_from_file(tempfile.gettempdir() + "/" +
-                                          inputfile_name + "_skolem.v")
+    createSkolem(candidateSkf, Xvar, Yvar, UniqueVars, UniqueDef, inputfile_name)
+    log_entry.leanskf_out = get_from_file(
+        tempfile.gettempdir() + "/" + inputfile_name + "_skolem.v"
+    )
 
     if args.verbose >= 2:
         print("c learned candidate functions", candidateSkf)
@@ -511,7 +547,8 @@ def manthan(args, config, queue=None):
     We are converting specification as a hard constraint for maxsat.
     """
     maxsatWt, maxsatcnf, cnfcontent = maxsatContent(
-        cnfcontent, (len(Xvar) + len(Yvar)), (len(PosUnate) + len(NegUnate)))
+        cnfcontent, (len(Xvar) + len(Yvar)), (len(PosUnate) + len(NegUnate))
+    )
 
     log_entry.maxsatWt = maxsatWt
     log_entry.maxsatCnf = maxsatcnf
@@ -551,15 +588,13 @@ def manthan(args, config, queue=None):
                 print(" c no more repair needed")
                 print(" c number of repairs needed to converge", countRefine)
 
-            log_entry.output_verilog = createSkolemfunction(
-                inputfile_name, Xvar, Yvar)
+            log_entry.output_verilog = createSkolemfunction(inputfile_name, Xvar, Yvar)
 
             end_time = time.time()
             log_entry.sat = True
 
             print(" c Total time taken", str(end_time - start_time))
-            print("Skolem functions are stored at %s_skolem.v" %
-                  (inputfile_name))
+            print("Skolem functions are stored at %s_skolem.v" % (inputfile_name))
             break
 
         if ret == 1:
@@ -571,18 +606,16 @@ def manthan(args, config, queue=None):
             countRefine += 1  # update the number of repair itr
 
             if args.verbose > 1:
-                print(
-                    " c verification check is SAT, we have counterexample to fix"
-                )
+                print(" c verification check is SAT, we have counterexample to fix")
                 print(" c number of repair", countRefine)
                 print(" c finding candidates to repair using maxsat")
 
             if args.verbose >= 2:
                 print("counter example to repair", sigma)
 
-            repaircnf, maxsatcnfRepair = addXvaluation(cnfcontent, maxsatWt,
-                                                       maxsatcnf, sigma[0],
-                                                       Xvar)
+            repaircnf, maxsatcnfRepair = addXvaluation(
+                cnfcontent, maxsatWt, maxsatcnf, sigma[0], Xvar
+            )
 
             log_entry.cnfcontent_2.append(repaircnf)
             log_entry.maxsatCnf_1.append(maxsatcnfRepair)
@@ -607,12 +640,10 @@ def manthan(args, config, queue=None):
             assert len(ind) > 0
 
             if args.verbose > 1:
-                print(" c number of candidates undergoing repair iterations",
-                      len(ind))
+                print(" c number of candidates undergoing repair iterations", len(ind))
 
             if args.verbose >= 2:
-                print(" c number of candidates undergoing repair iterations",
-                      len(ind))
+                print(" c number of candidates undergoing repair iterations", len(ind))
                 print(" c variables undergoing refinement", ind)
 
             if not args.henkin:
@@ -655,19 +686,18 @@ def manthan(args, config, queue=None):
             """
 
             if lexflag and args.lexmaxsat:
-                print(
-                    " c calling rc2 to find another set of candidates to repair"
-                )
+                print(" c calling rc2 to find another set of candidates to repair")
 
-                ind = callRC2(maxsatcnfRepair, sigma[2], UniqueVars, Unates,
-                              Yvar, YvarOrder)
+                ind = callRC2(
+                    maxsatcnfRepair, sigma[2], UniqueVars, Unates, Yvar, YvarOrder
+                )
 
                 assert len(ind) > 0
 
                 if args.verbose > 1:
                     print(
-                        " c number of candidates undergoing repair iterations",
-                        len(ind))
+                        " c number of candidates undergoing repair iterations", len(ind)
+                    )
 
                 if not args.henkin:
                     lexflag, repairfunctions = repair(
@@ -706,8 +736,7 @@ def manthan(args, config, queue=None):
 
             log_entry.repaired_func.append(repairfunctions)
 
-            updateSkolem(repairfunctions, countRefine, sigma[2],
-                         inputfile_name, Yvar)
+            updateSkolem(repairfunctions, countRefine, sigma[2], inputfile_name, Yvar)
 
         if countRefine > args.maxrepairitr:
             print(" c number of maximum allowed repair iteration reached")
@@ -718,8 +747,7 @@ def manthan(args, config, queue=None):
     end_time = time.time()
 
     if args.logtime:
-        logtime(inputfile_name,
-                "repair time:" + str(end_time - start_time_repair))
+        logtime(inputfile_name, "repair time:" + str(end_time - start_time_repair))
         logtime(inputfile_name, "totaltime:" + str(end_time - start_time))
     log_entry.refine_time = end_time - start_time_repair
     log_entry.total_time = end_time - start_time
@@ -768,17 +796,21 @@ if __name__ == "__main__":
         "--adaptivesample",
         type=int,
         default=1,
-        help=("required to enable = 1/disable = 0" +
-              "adaptive weighted sampling. Default is 1 "),
+        help=(
+            "required to enable = 1/disable = 0"
+            + "adaptive weighted sampling. Default is 1 "
+        ),
         dest="adaptivesample",
     )
     parser.add_argument(
         "--fullsample",
         type=int,
         default=0,
-        help=("required to enable = 1/disable = 0" +
-              "fully sampling from out verilog. Default is 1 "),
-        dest="fullsample"
+        help=(
+            "required to enable = 1/disable = 0"
+            + "fully sampling from out verilog. Default is 1 "
+        ),
+        dest="fullsample",
     )
     parser.add_argument(
         "--showtrees",
@@ -789,8 +821,8 @@ if __name__ == "__main__":
         "--maxsamples",
         type=int,
         help=(
-            "num of samples used to learn the candidates." +
-            "Takes int value. If not used, Manthan will decide value as per |Y|"
+            "num of samples used to learn the candidates."
+            + "Takes int value. If not used, Manthan will decide value as per |Y|"
         ),
         dest="maxsamples",
     )
@@ -805,35 +837,42 @@ if __name__ == "__main__":
         "--multiclass",
         help=(
             "to learn a subset of existentially quantified variables together"
-            + " use --multiclass "),
+            + " use --multiclass "
+        ),
         action="store_true",
     )
     parser.add_argument(
         "--lexmaxsat",
         help=(
-            "to use lexicographical maxsat to find candidates to repair use " +
-            "--lexmaxsat "),
+            "to use lexicographical maxsat to find candidates to repair use "
+            + "--lexmaxsat "
+        ),
         action="store_true",
     )
     parser.add_argument(
         "--henkin",
-        help=("if you have dqdimacs instead of qdimacs, " +
-              "and would like to learn Henkin functions use --henkin"),
+        help=(
+            "if you have dqdimacs instead of qdimacs, "
+            + "and would like to learn Henkin functions use --henkin"
+        ),
         action="store_true",
     )
     parser.add_argument(
         "--logtime",
-        help=("to log time taken in each phase of manthan " +
-              "in <inputfile>_timedetails file use --logtime"),
+        help=(
+            "to log time taken in each phase of manthan "
+            + "in <inputfile>_timedetails file use --logtime"
+        ),
         action="store_true",
     )
     parser.add_argument(
         "--hop",
         help=(
-            "if learning candidates via multiclassification, " +
-            "hop distances in primal graph " +
-            "is used to cluster existentially quantified variables together," +
-            "use --hop <int> to define hop distance. Default is 3"),
+            "if learning candidates via multiclassification, "
+            + "hop distances in primal graph "
+            + "is used to cluster existentially quantified variables together,"
+            + "use --hop <int> to define hop distance. Default is 3"
+        ),
         type=int,
         default=3,
         dest="hop",
@@ -843,7 +882,8 @@ if __name__ == "__main__":
         type=int,
         help=(
             "maximum number of existentially quantified variables in a subset"
-            + "to be learned together via multiclassfication. Default is 8"),
+            + "to be learned together via multiclassfication. Default is 8"
+        ),
         default=8,
         dest="clustersize",
     )
@@ -853,6 +893,13 @@ if __name__ == "__main__":
         type=int,
         default=1,
         dest="unique",
+    )
+    parser.add_argument(
+        "--rand-candidate",
+        help="use a random candidate skf",
+        default=False,
+        dest="rand_candidate",
+        action="store_true",
     )
     parser.add_argument("--timeout", type=int, default=7200, dest="timeout")
     parser.add_argument("input", help="input file")
