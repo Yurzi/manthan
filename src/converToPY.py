@@ -1,9 +1,28 @@
 import ctypes
 import os
 from enum import Enum
-from typing import Self
-
+from typing import Callable, List, Optional, Self, Tuple
+import re
 import networkx as nx
+
+
+def to_valid_filename(s):
+    # 移除不允许的文件名字符
+    s = re.sub(r'[\\/*?:"<>|]', "", s)
+    # 也可以考虑将空格替换为下划线
+    s = s.replace(" ", "_")
+    # 删除其他不合法的字符，根据需要添加
+    s = re.sub(r'[^\w.-]', '', s)
+    # 防止以系统保留名称命名（例如，在Windows中）
+    reserved_names = {
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
+        "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
+        "LPT6", "LPT7", "LPT8", "LPT9"
+    }
+    if s.upper() in reserved_names:
+        s = "_" + s
+    # 限制文件名长度 (例如，255字符对大多数现代文件系统来说是安全的)
+    return s[:255]
 
 
 class Token:
@@ -28,7 +47,7 @@ class Token:
         Eof = "Eof"
 
     def __init__(self, kind: Kind, lexme: str) -> None:
-        self.kind: Self.Kind = kind
+        self.kind: Token.Kind = kind
         self.lexme: str = lexme
 
     def __str__(self) -> str:
@@ -83,13 +102,13 @@ class Tokenzier:
             self._mem += c
             return c
 
-        def eat_while(self, predicate: callable) -> None:
+        def eat_while(self, predicate: Callable) -> None:
             while predicate(self.first) and not self.is_eof:
                 self.bump()
 
     def __init__(self, input: str) -> None:
         self.raw_str: str = input
-        self.cursor: self.Cursor = self.Cursor(input)
+        self.cursor: Tokenzier.Cursor = self.Cursor(input)
 
     def __iter__(self) -> Self:
         return self
@@ -173,7 +192,7 @@ class Tokenzier:
     def _advance_token(self) -> Token:
         first_char = self.cursor.bump()
         if first_char is None:
-            return Token(Token.Kind.Eof, 0)
+            return Token(Token.Kind.Eof, "\0")
 
         token_kind = Token.Kind.Unknown
         if self.is_whitespace(first_char):
@@ -225,9 +244,10 @@ class StmLine:
         Output = "output"
         Wire = "wire"
         Assign = "assign"
+        Unknown = "unknown"
 
     def __init__(self, lineno: int, tokens: list[Token]) -> None:
-        self.kind: self.Kind = None
+        self.kind: StmLine.Kind = StmLine.Kind.Unknown
         self.lineno = lineno
         self.tokens = tokens
         self.parse()
@@ -270,7 +290,7 @@ class StmLine:
         return res
 
     @staticmethod
-    def from_tokens(tokens: list[Token]) -> list[Self]:
+    def from_tokens(tokens: list[Token]) -> list['StmLine']:
         lineno: int = 1
         res: list[StmLine] = list()
         line: list[Token] = list()
@@ -292,7 +312,7 @@ class Expression:
         self.stm = stm
         self.expr: list[Token] = list()
         self.income: list[Token] = list()
-        self.outcome: Token = None
+        self.outcome: Token = Token(Token.Kind.Ident, "unknown")
         self.parse()
 
     def parse(self) -> None:
@@ -334,7 +354,7 @@ class Expression:
                 can_add_lit = True
                 continue
             if token.kind is Token.Kind.Xor:
-                res.append("^")
+                res.append("!=")
                 can_add_lit = True
                 continue
             if token.kind is Token.Kind.Paren:
@@ -474,7 +494,7 @@ class Module:
 
     def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
-        self.name: Token | None = None
+        self.name: Token = Token(Token.Kind.Ident, "SkolemFormula")
         self.input_vars: list[Token] = list()
         self.output_vars: list[Token] = list()
         self.inner_vars: list[Token] = list()
@@ -526,13 +546,50 @@ class Module:
             self.exprs), "some experssion is missing"
         self.exprs = sorted_exprs
 
+    def sort_input(self):
+        input_vars = [var.lexme for var in self.input_vars]
+
+        def special_sort(vars: list) -> list:
+            for i in range(1, len(vars)):
+                for j in range(0, len(vars) - i):
+                    if vars[j] == "out":
+                        vars[j], vars[j + 1] = vars[j + 1], vars[j]
+                        continue
+
+                    if vars[j + 1] == "out":
+                        continue
+
+                    var_1 = int(vars[j][1:])
+                    var_2 = int(vars[j + 1][1:])
+
+                    if var_1 > var_2:
+                        vars[j], vars[j + 1] = vars[j + 1], vars[j]
+            return vars
+
+        input_vars = special_sort(input_vars)
+        res = list()
+        for var in input_vars:
+            for var_token in self.input_vars:
+                if var_token.lexme == var:
+                    res.append(var_token)
+                    break
+
+        self.input_vars = res
+
     def gen_pycode(self) -> str:
 
         def special_sort(vars: list) -> list:
             for i in range(1, len(vars)):
                 for j in range(0, len(vars) - i):
+                    if vars[j] == "out":
+                        vars[j], vars[j + 1] = vars[j + 1], vars[j]
+                        continue
+                    if vars[j + 1] == "out":
+                        continue
+
                     var_1 = int(vars[j][1:])
                     var_2 = int(vars[j + 1][1:])
+
                     if var_1 > var_2:
                         vars[j], vars[j + 1] = vars[j + 1], vars[j]
             return vars
@@ -569,13 +626,20 @@ class Module:
         res = "\n".join(res)
         return res
 
-    def gen_cppcode(self):
+    def gen_cppcode(self) -> Tuple[str, List]:
 
         def special_sort(vars: list) -> list:
             for i in range(1, len(vars)):
                 for j in range(0, len(vars) - i):
+                    if vars[j] == "out":
+                        vars[j], vars[j + 1] = vars[j + 1], vars[j]
+                        continue
+                    if vars[j + 1] == "out":
+                        continue
+
                     var_1 = int(vars[j][1:])
                     var_2 = int(vars[j + 1][1:])
+
                     if var_1 > var_2:
                         vars[j], vars[j + 1] = vars[j + 1], vars[j]
             return vars
@@ -585,6 +649,7 @@ class Module:
         var_list = [var.lexme for var in self.input_vars]
         var_list.extend([var.lexme for var in self.output_vars])
         var_list = special_sort(var_list)
+        var_order = var_list
 
         res.append("bool* skf_func(bool* args)")
         res.append("{")
@@ -592,8 +657,8 @@ class Module:
         for i in range(len(var_list)):
             res.append("    bool " + var_list[i] + " = args[" + str(i) + "];")
         # allocate memory for return
-        ret_vars = [var.lexme for var in self.output_vars]
-        ret_vars.extend([var.lexme for var in self.input_vars])
+        ret_vars = [var.lexme for var in self.input_vars]
+        ret_vars.extend([var.lexme for var in self.output_vars])
         ret_vars = special_sort(ret_vars)
 
         malloc_stm = f"    bool* ret = (bool*)malloc({len(ret_vars)} * sizeof(bool));"
@@ -622,7 +687,7 @@ class Module:
         res.append("}")
 
         res = "\n".join(res)
-        return res
+        return res, var_order
 
     def gen_verilog(self) -> str:
         res = list()
@@ -665,7 +730,7 @@ class Module:
         return res
 
 
-def convert_skf_to_pyfunc(input: str) -> callable:
+def convert_skf_to_pyfunc(input: str) -> Callable:
     tokens = list()
     for token in Tokenzier(input):
         tokens.append(token)
@@ -692,7 +757,7 @@ def convert_skf_to_pycode(input: str) -> str:
     return module.gen_pycode()
 
 
-def convert_skf_to_cppcode(input: str) -> str:
+def convert_skf_to_cppcode(input: str) -> Tuple[str, List]:
     tokens = list()
     for token in Tokenzier(input):
         tokens.append(token)
@@ -700,16 +765,17 @@ def convert_skf_to_cppcode(input: str) -> str:
     module = Module(tokens)
     module.reorgnize()
 
-    func_code = module.gen_cppcode()
+    func_code, var_order = module.gen_cppcode()
     # add header
     header = [
         "#include <stdbool.h>", "#include <stdlib.h>", "#include <memory.h>"
     ]
     func_code = "\n".join(header) + "\n\n" + 'extern "C"' + "\n" + func_code
-    return func_code
+    return func_code, var_order
 
 
-def convert_skf_to_forigen_func(input: str, instance_name: str = "skf") -> callable:
+def convert_skf_to_forigen_func(input: str,
+                                instance_name: str = "skf") -> Tuple[Callable, List]:
     tokens = list()
     for token in Tokenzier(input):
         tokens.append(token)
@@ -717,7 +783,7 @@ def convert_skf_to_forigen_func(input: str, instance_name: str = "skf") -> calla
     module = Module(tokens)
     module.reorgnize()
 
-    func_code = module.gen_cppcode()
+    func_code, var_order = module.gen_cppcode()
 
     # add header
     header = [
@@ -740,7 +806,7 @@ def convert_skf_to_forigen_func(input: str, instance_name: str = "skf") -> calla
     skf_func.argtypes = [ctypes.POINTER(ctypes.c_bool)]
     skf_func.restype = ctypes.POINTER(ctypes.c_bool)
 
-    return skf_func
+    return skf_func, var_order
 
 
 def repair_skf_verilog(input: str) -> str:
@@ -761,3 +827,152 @@ def print_debug(input: str):
 
     module = Module(tokens)
     print(module)
+
+
+def get_verilog_input_order(input: str) -> List[str]:
+    tokens = list()
+    for token in Tokenzier(input):
+        tokens.append(token)
+
+    module = Module(tokens)
+    input_var_order = [var.lexme for var in module.input_vars]
+    return input_var_order
+
+
+def convert_qdimacs_to_cppcode(input: str) -> str:
+    # parse to plain string
+    Xvar = []
+    Yvar = []
+    qdimacs_list = []
+
+    lines = input.split("\n")
+    for line in lines:
+        if line.startswith("c"):
+            continue
+
+        if (line == "") or (line == "\n"):
+            continue
+
+        if line.startswith("p"):
+            continue
+
+        if line.startswith("a"):
+            Xvar += line.strip("a").strip("\n").strip(" ").split(" ")[:-1]
+            continue
+
+        if line.startswith("e"):
+            Yvar += line.strip("e").strip("\n").strip(" ").split(" ")[:-1]
+            continue
+
+        clause = line.strip(" ").strip("\n").strip(" ").split(" ")[:-1]
+        if len(clause) > 0:
+            clause = list(map(int, list(clause)))
+            qdimacs_list.append(clause)
+    Xvar = list(map(int, Xvar))
+    Yvar = list(map(int, Yvar))
+    Tvar = list()
+    # check var in clause
+    for clause in qdimacs_list:
+        for var in clause:
+            if abs(var) not in Xvar and abs(var) not in Yvar and abs(var) not in Tvar:
+                Tvar.append(abs(var))
+
+    # gen cpp code
+    def special_sort(vars: list) -> list:
+        for i in range(1, len(vars)):
+            for j in range(0, len(vars) - i):
+                var_1 = int(vars[j][1:])
+                var_2 = int(vars[j + 1][1:])
+                if var_1 > var_2:
+                    vars[j], vars[j + 1] = vars[j + 1], vars[j]
+        return vars
+
+    res = list()
+    vars_list = ["x" + str(xvar) for xvar in Xvar]
+    vars_list.extend(["y" + str(yvar) for yvar in Yvar])
+    vars_list.extend(["t" + str(tvar) for tvar in Tvar])
+    vars_list = special_sort(vars_list)
+
+    # func def
+    res.append("bool F_func(bool* args)")
+    res.append("{")
+    for i in range(len(vars_list)):
+        res.append(f"    bool {vars_list[i]} = args[{i}];")
+    # expr
+    exprs_def = list()
+    for clause in qdimacs_list:
+        clause_expr = []
+        for var in clause:
+            is_xvar = False
+            is_yvar = False
+            is_tvar = False
+            if abs(var) in Xvar:
+                is_xvar = True
+
+            if abs(var) in Yvar:
+                is_yvar = True
+
+            if abs(var) in Tvar:
+                is_tvar = True
+
+            if var < 0:
+                if is_xvar:
+                    literal = "!" + "x" + str(abs(var))
+                    clause_expr.append(literal)
+                elif is_yvar:
+                    literal = "!" + "y" + str(abs(var))
+                    clause_expr.append(literal)
+                elif is_tvar:
+                    literal = "!" + "t" + str(abs(var))
+                    clause_expr.append(literal)
+            else:
+                if is_xvar:
+                    literal = "x" + str(var)
+                    clause_expr.append(literal)
+                elif is_yvar:
+                    literal = "y" + str(var)
+                    clause_expr.append(literal)
+                elif is_tvar:
+                    literal = "t" + str(var)
+                    clause_expr.append(literal)
+        clause_expr = " || ".join(clause_expr)
+        clause_expr = "( " + clause_expr + " )"
+        exprs_def.append(clause_expr)
+    exprs_def = " && ".join(exprs_def)
+    exprs_def = "    bool out = " + exprs_def + ";"
+    res.append(exprs_def)
+    # return
+    ret = "    return out;"
+    res.append(ret)
+    res.append("}")
+    func_code = "\n".join(res)
+
+    header = [
+        "#include <stdbool.h>", "#include <stdlib.h>", "#include <memory.h>"
+    ]
+    func_code = "\n".join(header) + "\n\n" + 'extern "C"' + "\n" + func_code
+
+    return func_code
+
+
+def convert_qdimacs_to_forigen_func(input: str,
+                                    instance_name: str = "F_qdimacs"):
+    cpp_code = convert_qdimacs_to_cppcode(input)
+    instance_name = "F_" + to_valid_filename(instance_name)
+
+    cpp_filename = f"run/{instance_name}.cc"
+    lib_filename = f"run/lib{instance_name}.so"
+
+    with open(cpp_filename, "w") as f:
+        f.write(cpp_code)
+
+    cmd = f"gcc -fPIC -shared -o {lib_filename} {cpp_filename}"
+    os.system(cmd)
+
+    # use ctypes to load the shared library
+    lib = ctypes.cdll.LoadLibrary(lib_filename)
+    F_func = lib.F_func
+    F_func.argtypes = [ctypes.POINTER(ctypes.c_bool)]
+    F_func.restype = ctypes.c_bool
+
+    return F_func

@@ -9,6 +9,20 @@ def get_files(base):
             if file.endswith(".qdimacs"):
                 yield os.path.join(root, file)
 
+def has_out(file: str | os.PathLike) -> bool:
+    out_dir = "out"
+    basename = os.path.basename(file).split('.')[0:-1]
+    basename = ".".join(basename)
+    target = f"{basename}_skolem.v"
+
+    for root, dirs, files in os.walk(out_dir):
+        for file in files:
+            if file == target:
+                return True
+
+
+    return False
+
 
 def has_result(file: str | os.PathLike) -> bool:
     log_dir = "log"
@@ -59,6 +73,10 @@ if __name__ == "__main__":
         "output", type=str, default="tasks.list", help="output file name"
     )
 
+    parser.add_argument(
+        "--force", action="store_true", default=False, help="force to generate tasks list"
+    )
+
     format_str = "python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 "
 
     args = parser.parse_args()
@@ -67,7 +85,10 @@ if __name__ == "__main__":
     todo = 0
     for file in get_files(args.task_dir):
         total += 1
-        if has_result(file):
+        if has_result(file) and not args.force:
+            continue
+
+        if not has_out(file):
             continue
 
         todo += 1

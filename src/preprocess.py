@@ -114,10 +114,10 @@ def parse(args):
                     if not dg.has_edge(yvar_j, yvar_i):
                         dg.add_edge(yvar_i, yvar_j)
 
-        return Xvar, Yvar, HenkinDep, qdimacs_list, dg
+        return Xvar, Yvar, qdimacs_list, dg, HenkinDep
 
     else:
-        return Xvar, Yvar, qdimacs_list, dg
+        return Xvar, Yvar, qdimacs_list, dg, {}
 
 
 def convertcnf(args, cnffile_name, Yvar=[]):

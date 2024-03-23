@@ -4,6 +4,8 @@ build/
 __pycache__/
 out/
 dataset/
+dataset_bak/
+qbffam
 log/
 log-middle/
 errors/
@@ -12,3 +14,5 @@ errors/
 *.v
 *.txt
 run/
+tests/
+*.png

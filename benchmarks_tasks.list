@@ -4,3 +4,5 @@ python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchma
 python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/test_1.qdimacs
 python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/small-seq-fixpoint-5.qdimacs
 python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/usb-phy-fixpoint-1.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/small-dyn-partition-fixpoint-1.qdimacs
+python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 benchmarks/small-dyn-partition-fixpoint-2.qdimacs

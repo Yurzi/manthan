@@ -138,6 +138,14 @@ def createDecisionTree(featname, featuredata, labeldata, yvar, args, Xvar, Yvar)
         criterion="gini", min_impurity_decrease=args.gini, random_state=args.seed
     )
     clf = clf.fit(featuredata, labeldata)
+    score = clf.score(featuredata, labeldata)
+
+    inputfile_name = args.input.split("/")[-1].split(".")[:-1]
+    inputfile_name = ".".join(inputfile_name)
+    with open("log/" + inputfile_name + "_score.txt", "a") as f:
+        f.write(str(score))
+        f.write("\n")
+
     if args.showtrees:
         dot_data = tree.export_graphviz(
             clf, feature_names=featname, out_file=None, filled=True, rounded=True

@@ -24,6 +24,7 @@ if __name__ == "__main__":
         "LearnSkf时间": list(),
         "Refine时间": list(),
         "修复次数": list(),
+        "决策树得分": list(),
         "合理采样": list(),
         "总采样": list(),
         "退出阶段": list(),
@@ -39,6 +40,25 @@ if __name__ == "__main__":
         except BaseException:
             print("Error: ", file)
             continue
+
+        # score
+        file_path = dir_path + "/" + log_obj.instance_name + "_score.txt"
+        file = ""
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                file = f.read()
+
+            lines = file.splitlines()
+            score_sum = 0
+            for line in lines:
+                tokens = line.split(" ")
+                score = float(tokens[-1])
+                score_sum += score
+        
+            score_mean = score_sum / len(lines)
+            df_data["决策树得分"].append(score_mean)
+        else:
+            df_data["决策树得分"].append(-1)
 
         df_data["实例名称"].append(log_obj.instance_name)
         df_data["实例内容"].append(log_obj.instance_str)

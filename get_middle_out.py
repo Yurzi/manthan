@@ -1,7 +1,7 @@
 from src.logUtils import LogEntry
 import pprint
 
-log_entry = LogEntry.from_file("log/qbffam_KBKF_QU_2.pkl")
+log_entry = LogEntry.from_file("log/UserServiceImpl.pkl")
 
 print("-------- Candidates SKF --------")
 print(log_entry.leanskf_out)
