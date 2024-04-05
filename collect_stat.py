@@ -1,12 +1,14 @@
-from src.logUtils import LogEntry
 import os
+
 import pandas as pd
+
+from src.logUtils import LogEntry
 
 
 def get_files(dir: str):
     for root, dirs, files in os.walk(dir):
         for file in files:
-            if file.endswith(".pkl"):
+            if file.endswith(".pkl.zst"):
                 yield os.path.join(root, file)
 
 
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     for file in get_files(dir_path):
         print("Now: ", file)
         try:
-            log_obj = LogEntry.from_file(file)
+            log_obj: LogEntry = LogEntry.from_file(file)
         except BaseException:
             print("Error: ", file)
             continue
@@ -54,7 +56,7 @@ if __name__ == "__main__":
                 tokens = line.split(" ")
                 score = float(tokens[-1])
                 score_sum += score
-        
+
             score_mean = score_sum / len(lines)
             df_data["决策树得分"].append(score_mean)
         else:
@@ -67,9 +69,13 @@ if __name__ == "__main__":
         df_data["子句平均长度"].append(log_obj.get_clause_list_avg_len())
         df_data["输出变量个数"].append(len(log_obj.output_vars))
         df_data["输出电路规模"].append(log_obj.caculate_circuit_size())
-        df_data["Preprocess时间"].append(log_obj.preprocess_time)
-        df_data["LearnSkf时间"].append(log_obj.leanskf_time)
-        df_data["Refine时间"].append(log_obj.refine_time)
+        df_data["Preprocess时间"].append(
+            log_obj.preprocess_time_start - log_obj.preprocess_time_end
+        )
+        df_data["LearnSkf时间"].append(
+            log_obj.leanskf_time_start - log_obj.leanskf_time_end
+        )
+        df_data["Refine时间"].append(log_obj.refine_time_start - log_obj.refine_time_end)
         df_data["修复次数"].append(log_obj.repair_count)
         df_data["合理采样"].append(log_obj.get_samples_acc()[0])
         df_data["总采样"].append(log_obj.num_samples)

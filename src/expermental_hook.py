@@ -62,7 +62,7 @@ def genRandomVerilog(target: int, Yset: List, Xvar: List) -> Tuple[str, List]:
     # xvar
     symbols_list = ["i" + str(var) for var in Xvar]
     # relative yvar
-    symbols_list.extend(["w" + str(var) for var in Yset if var != target])
+    # symbols_list.extend(["w" + str(var) for var in Yset if var != target])
     # constant
     symbols_list.extend(["0", "1"])
     random.shuffle(symbols_list)

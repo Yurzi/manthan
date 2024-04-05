@@ -65,7 +65,7 @@ from src.repair import (
     updateSkolem,
 )
 
-log_entry = LogEntry()
+log_entry: LogEntry = LogEntry()
 in_exit_progress = False
 
 
@@ -195,6 +195,7 @@ def manthan(args, config, queue=None):
 
     print(" c parsing")
     start_time = time.time()
+    log_entry.total_time_start = start_time
 
     if args.henkin:
         Xvar, Yvar, qdimacs_list, dg, HenkinDep = parse(args)
@@ -239,9 +240,10 @@ def manthan(args, config, queue=None):
     cnfcontent = cnfcontent.strip("\n") + "\n"
     log_entry.cnfcontent = cnfcontent.strip("\n")
 
+    start_time_preprocess = time.time()
+    log_entry.preprocess_time_start = start_time_preprocess
     if (args.preprocess) and (not (args.henkin)):
         print(" c preprocessing: finding unates (constant functions)")
-        start_time_preprocess = time.time()
         """
         We find constants functions
         only if the existentially quantified variables are less then 20000
@@ -256,7 +258,6 @@ def manthan(args, config, queue=None):
             NegUnate = []
 
         end_time_preprocess = time.time()
-
         if args.logtime:
             logtime(
                 inputfile_name,
@@ -287,7 +288,6 @@ def manthan(args, config, queue=None):
             cnfcontent += "-%s 0\n" % (yvar)
 
         log_entry.perprocess_out = Unates
-        log_entry.preprocess_time = end_time_preprocess - start_time_preprocess
 
     else:
         Unates = []
@@ -307,8 +307,10 @@ def manthan(args, config, queue=None):
             inputfile_name, Xvar, Yvar, PosUnate, NegUnate
         )
 
+        end_time_preprocess = time.time()
+        log_entry.preprocess_time_end = end_time_preprocess
         end_time = time.time()
-        log_entry.total_time = end_time - start_time
+        log_entry.total_time_end = end_time
         log_entry.exit_after_preprocess = True
 
         print(" c Manthan has synthesized Skolem functions")
@@ -364,8 +366,10 @@ def manthan(args, config, queue=None):
             inputfile_name, Xvar, Yvar, PosUnate, NegUnate, UniqueVars, UniqueDef
         )
 
+        end_time_preprocess = time.time()
+        log_entry.preprocess_time_end = end_time_preprocess
         end_time = time.time()
-        log_entry.total_time = end_time - start_time
+        log_entry.total_time_end = end_time
         log_entry.exit_after_preprocess = True
 
         print(" c Total time taken", str(end_time - start_time))
@@ -375,10 +379,15 @@ def manthan(args, config, queue=None):
             logtime(inputfile_name, "totaltime:" + str(end_time - start_time))
 
         return
+
+    # end of preprocess
+    end_time_preprocess = time.time()
+    log_entry.preprocess_time_end = end_time_preprocess
     """
     deciding the number of samples to be generated
     """
     start_time_datagen = time.time()
+    log_entry.datagen_time_start = start_time_datagen
 
     if not args.maxsamples:
         if len(Xvar) > 4000:
@@ -467,7 +476,7 @@ def manthan(args, config, queue=None):
     end_time_datagen = time.time()
 
     log_entry.datagen_out = samples
-    log_entry.datagen_time = end_time_datagen - start_time_datagen
+    log_entry.datagen_time_end = end_time_datagen
 
     if args.logtime:
         logtime(
@@ -487,6 +496,7 @@ def manthan(args, config, queue=None):
     verilogformula, dg, ng = convert_verilog(args, Xvar, Yvar, dg)
 
     start_time_learn = time.time()
+    log_entry.leanskf_time_start = start_time_learn
 
     if args.rand_candidate:
         candidateSkf, dg = learnRandomCandidate(
@@ -518,7 +528,7 @@ def manthan(args, config, queue=None):
             inputfile_name,
             "candidate learning:" + str(end_time_learn - start_time_learn),
         )
-    log_entry.leanskf_time = end_time_learn - start_time_learn
+    log_entry.leanskf_time_end = end_time_learn
     """
     YvarOrder is a total order of Y variables that represents interdependecies among Y.
     """
@@ -557,6 +567,7 @@ def manthan(args, config, queue=None):
     countRefine = 0
 
     start_time_repair = time.time()
+    log_entry.refine_time_start = start_time_repair
 
     while True:
         now_time = time.time()
@@ -749,8 +760,8 @@ def manthan(args, config, queue=None):
     if args.logtime:
         logtime(inputfile_name, "repair time:" + str(end_time - start_time_repair))
         logtime(inputfile_name, "totaltime:" + str(end_time - start_time))
-    log_entry.refine_time = end_time - start_time_repair
-    log_entry.total_time = end_time - start_time
+    log_entry.refine_time_end = end_time
+    log_entry.total_time_end = end_time
     log_entry.repair_count = countRefine
     if countRefine == 0:
         log_entry.exit_after_leanskf = True
