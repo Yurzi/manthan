@@ -1,65 +1,78 @@
 import argparse
 import os
+from typing import Generator
+
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    ProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+
 from src.logUtils import LogEntry
 
+LOGFILE_DIR = "log"
+LOGFILE_ENDWITH = ".pkl.zst"
+OUTFILE_DIR = "out"
+OUTFILE_ENDWITH = "_skolem.v"
 
-def get_files(base):
+progress_bar = Progress(
+    TextColumn("[progress.description]{task.description}"),
+    BarColumn(),
+    MofNCompleteColumn(),
+    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+    TimeRemainingColumn(),
+    TimeElapsedColumn(),
+)
+
+
+def get_files(base: os.PathLike | str) -> Generator[os.PathLike | str, None, None]:
     for root, dirs, files in os.walk(base):
         for file in files:
             if file.endswith(".qdimacs"):
                 yield os.path.join(root, file)
 
-def has_out(file: str | os.PathLike) -> bool:
-    out_dir = "out"
-    basename = os.path.basename(file).split('.')[0:-1]
-    basename = ".".join(basename)
-    target = f"{basename}_skolem.v"
 
-    for root, dirs, files in os.walk(out_dir):
-        for file in files:
-            if file == target:
-                return True
+def get_instance_name(qdimacs_path: os.PathLike | str) -> str:
+    path = os.path.basename(qdimacs_path)
+    instance_name = path.split(".")[0:-1]
+    instance_name = ".".join(instance_name)
+    return instance_name
 
 
-    return False
+def has_outfile(instance_name: str) -> bool:
+    outfile = os.path.join(OUTFILE_DIR, instance_name + OUTFILE_ENDWITH)
+    return os.path.exists(outfile)
 
 
-def has_result(file: str | os.PathLike) -> bool:
-    log_dir = "log"
-    basname = os.path.basename(file).split(".")[0:-1]
-    basname = ".".join(basname)
+def has_logfile(instance_name: str) -> bool:
+    logfile = os.path.join(LOGFILE_DIR, instance_name + LOGFILE_ENDWITH)
+    return os.path.exists(logfile)
 
-    for root, dirs, files in os.walk(log_dir):
-        for file in files:
-            if file.endswith(".pkl"):
-                filename = os.path.join(root, file)
-                file = file.split(".")[0:-1]
-                file = ".".join(file)
-                if basname == file:
-                    try:
-                        log_obj = LogEntry.from_file(filename)
-                    except Exception as e:
-                        print(f"Found bad log: {filename}, Error: {e}")
-                        return False
 
-                    if log_obj.exit_at_progress:
-                        print(f"Found exit_at_progress: {filename}")
-                        return False
+def has_error(instance_name: str) -> bool:
+    logfile = os.path.join(LOGFILE_DIR, instance_name + LOGFILE_ENDWITH)
+    try:
+        logEntry: LogEntry = LogEntry.from_file(logfile)
+    except Exception:
+        progress_bar.console.print("    [red]Error[/red]: bad logfile")
+        return True
 
-                    if log_obj.exit_after_error:
-                        print(f"Found exit_after_error: {filename}")
-                        return False
+    if logEntry.exit_after_error:
+        progress_bar.console.print("    [red]Error[/red]: exit after error")
+        return True
 
-                    if not any([log_obj.exit_after_preprocess,
-                                log_obj.exit_after_leanskf,
-                                log_obj.exit_after_refine,
-                                log_obj.exit_after_timeout,
-                                log_obj.exit_after_expection
-                                ]):
-                        print(f"Found unfinished: {filename}")
-                        return False
+    if logEntry.exit_after_expection:
+        progress_bar.console.print("    [red]Error[/red]: exit after expection")
+        return True
 
-                    return True
+    if logEntry.exit_at_progress:
+        progress_bar.console.print("    [red]Error[/red]: exit at progress")
+        return True
+
     return False
 
 
@@ -74,26 +87,77 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--force", action="store_true", default=False, help="force to generate tasks list"
+        "--force",
+        action="store_true",
+        default=False,
+        help="force to generate tasks list",
+        dest="force",
     )
 
-    format_str = "python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 "
+    parser.add_argument(
+        "--skip-no-out",
+        action="store_true",
+        default=False,
+        help="skip task without output file",
+        dest="skip_no_out",
+    )
+
+    parser.add_argument(
+        "--skip-has-error",
+        action="store_true",
+        default=False,
+        help="skip task with error in log file",
+        dest="skip_has_error",
+    )
+
+    parser.add_argument(
+        "--ignore-out",
+        action="store_true",
+        default=False,
+        help="ignore out file",
+        dest="ignore_out",
+    )
+
+    format_str = (
+        "python manthan.py --adaptivesample 1 --multiclass --lexmaxsat --unique 1 "
+    )
 
     args = parser.parse_args()
-    fd = open(args.output, "w")
-    total = 0
-    todo = 0
-    for file in get_files(args.task_dir):
-        total += 1
-        if has_result(file) and not args.force:
-            continue
 
-        if not has_out(file):
+    files = [file for file in get_files(args.task_dir)]
+    total = len(files)
+    files_tqdm = progress_bar.add_task("[blue] Checking...", total=total)
+    progress_bar.start()
+
+    fd = open(args.output, "w")
+    todo = 0
+    for file in files:
+        instance_name = get_instance_name(file)
+        progress_bar.print(f"[green]Now[/green]: {instance_name}")
+        if args.force:
+            todo += 1
+            cmd = format_str + str(file)
+            fd.write(cmd + "\n")
+            progress_bar.advance(files_tqdm)
             continue
+        # else
+        if not args.ignore_out:
+            if has_outfile(instance_name):
+                progress_bar.console.print("    [green]Skip[/green]: has out")
+                progress_bar.advance(files_tqdm)
+                continue
+
+        if has_logfile(instance_name):
+            if args.skip_has_error or not has_error(instance_name):
+                progress_bar.console.print("    [green]Skip[/green]: no error")
+                progress_bar.advance(files_tqdm)
+                continue
 
         todo += 1
-        cmd = format_str + file
+        cmd = format_str + str(file)
         fd.write(cmd + "\n")
+        progress_bar.advance(files_tqdm)
 
     fd.close()
+    progress_bar.stop()
     print(f"Total tasks: {total}, todo: {todo}")
